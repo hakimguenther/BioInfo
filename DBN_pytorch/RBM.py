@@ -44,7 +44,7 @@ class RBM:
 		self.hb = self.hb.to(self.device)
 		
 	def sample_h(self, x):
-		wx = torch.mm(x, self.W.t())
+		wx = torch.mm(x.double(), self.W.t().double())
 		activation = wx + self.hb
 		p_h_given_v = torch.sigmoid(activation)
 		if self.mode == 'bernoulli':
@@ -53,7 +53,7 @@ class RBM:
 			return p_h_given_v, torch.add(p_h_given_v, torch.normal(mean=0, std=1, size=p_h_given_v.shape))
 
 	def sample_v(self, y):
-		wy = torch.mm(y, self.W)
+		wy = torch.mm(y.double(), self.W.double())
 		activation = wy + self.vb
 		p_v_given_h =torch.sigmoid(activation)
 		if self.mode == 'bernoulli':

@@ -44,7 +44,7 @@ class DBN:
 			x_dash = torch.mean(x_dash, dim=0)
 		else:
 			x_dash = x.clone()
-		return x_dash
+		return x_dash.double()
 
 	def train_DBN(self, x):
 		for index, layer in enumerate(self.layers):
