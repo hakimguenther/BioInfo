@@ -2,13 +2,15 @@ import os
 import torch
 import numpy as np
 from torch.utils.data import Dataset
+from tqdm import tqdm
 
 class BioData(Dataset):
     def __init__(self, dir_path):
         self.data = []
 
+        print("Loading data from", dir_path)
         # Iterate through each file in the directory
-        for filename in os.listdir(dir_path):
+        for filename in tqdm(os.listdir(dir_path)):
             if filename.endswith('.npy'):
                 # Load the .npy file
                 file_path = os.path.join(dir_path, filename)
@@ -26,7 +28,7 @@ class BioData(Dataset):
         self.min_val = np.min(self.data)
         self.max_val = np.max(self.data)
         self.data = (self.data - self.min_val) / (self.max_val - self.min_val)
-        
+
     def __len__(self):
         # Return the total number of samples across all files
         return len(self.data)

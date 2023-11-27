@@ -9,6 +9,7 @@ from mpl_toolkits.axes_grid1 import ImageGrid
 from torchvision.utils import save_image, make_grid
 from vae import VAE
 from dataset import BioData
+from utils import visualize_sample
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -17,6 +18,7 @@ dir_path = '/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/da
 bio_dataset = BioData(dir_path)
 print("number of samples in dataset: ", len(bio_dataset))
 print("shape of first sample: ", bio_dataset[0].shape)
+# visualize_sample(bio_dataset[214], bio_dataset.min_val, bio_dataset.max_val)
 
 
 ## create dataloader for training
@@ -34,12 +36,15 @@ def loss_function(x, x_hat, mean, log_var):
 
     return reproduction_loss + KLD
 
+from tqdm import tqdm
+
 def train(model, optimizer, epochs, device, train_loader):
     model.train()
     for epoch in range(epochs):
         overall_loss = 0
-        for batch_idx, x in enumerate(train_loader):
-            
+        progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), desc=f"Epoch {epoch + 1}/{epochs}")
+        for batch_idx, x in progress_bar:
+
             x = x.to(device)
 
             optimizer.zero_grad()
@@ -52,7 +57,11 @@ def train(model, optimizer, epochs, device, train_loader):
             loss.backward()
             optimizer.step()
 
-        print("\tEpoch", epoch + 1, "\tAverage Loss: ", overall_loss / len(train_loader.dataset))
+            # Update progress bar description with the current loss
+            progress_bar.set_description(f"Epoch {epoch + 1}/{epochs} Loss: {loss.item():.4f}")
+
+        average_loss = overall_loss / len(train_loader.dataset)
+        print("\tEpoch", epoch + 1, "\tAverage Loss: ", average_loss)
     return overall_loss
 
 train(model, optimizer, epochs=1, device=device, train_loader=train_loader)
