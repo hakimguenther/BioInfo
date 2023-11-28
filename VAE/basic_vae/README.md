@@ -4,15 +4,15 @@
   - Review implementation in [vae.py](vae.py)
 - **Data**: I used 6 scans from the dataset, loaded all into memory (one pixel, all channels). Full dataset dimension: (462316, 442) so we have 462316 examples (comming from 6 files) each have the 442 intensity values.
   - Below some examples from the training date
-  - ![training_examples](docs/training_examples_plotted.png)
+  - ![training_examples](VAE/basic_vae/docstraining_examples_plotted.png)
 - **Data normalization**: I normalized the data to be between 0 and 1 using the min and max values of the entire dataset. This is done in the dataset class. Review implementation in [dataset.py](dataset.py)
   - I used this formula for normalization: $\frac{{value - min\_value}}{{max\_value - min_value}}$
 - **Data splits** I used a 80/20 split for training and testing datat (testing is only needed to check that the error is about the same for unseen data)
 - **training** I only trained locally one epoch. See training script [train.py](train.py)
   - Below are the logs:
-  - ![training_logs](docs/training_logs.png)
+  - ![training_logs](VAE/basic_vae/docstraining_logs.png)
 - **plotting examples**: I plotted a few examples from the training data and the reconstructed data. Below are the plots:
-  - ![original_vs_reconstructed](docs/original_vs_reconstructed_basic.png)
+  - ![original_vs_reconstructed](VAE/basic_vae/docsoriginal_vs_reconstructed_basic.png)
 
 ## Next step:
 - Validate that the approach is correct
