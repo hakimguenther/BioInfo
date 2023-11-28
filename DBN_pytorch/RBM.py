@@ -5,7 +5,7 @@ from tqdm import trange
 
 class RBM:
 
-	def __init__(self, n_visible, n_hidden, lr=0.001, epochs=5, mode='bernoulli', batch_size=32, k=3, optimizer='adam', gpu=False, savefile=None, early_stopping_patience=5):
+	def __init__(self, n_visible, n_hidden, lr=0.001, epochs=5, mode='bernoulli', batch_size=64, k=3, optimizer='adam', gpu=True, savefile=None, early_stopping_patience=5):
 		self.mode = mode # bernoulli or gaussian RBM
 		self.n_hidden = n_hidden #  Number of hidden nodes
 		self.n_visible = n_visible # Number of visible nodes

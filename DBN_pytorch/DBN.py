@@ -5,7 +5,7 @@ from tqdm import trange
 from RBM import RBM
 
 class DBN:
-	def __init__(self, input_size, layers, mode='bernoulli', gpu=False, k=5, savefile=None):
+	def __init__(self, input_size, layers, mode='bernoulli', gpu=False, k=5, savefile="demo_model.pt"):
 		self.layers = layers
 		self.input_size = input_size
 		self.layer_parameters = [{'W':None, 'hb':None, 'vb':None} for _ in range(len(layers))]
@@ -14,7 +14,7 @@ class DBN:
 		self.savefile = savefile
 
 	def sample_v(self, y, W, vb):
-		wy = torch.mm(y, W)
+		wy = torch.mm(y.double(), W.double())
 		activation = wy + vb
 		p_v_given_h =torch.sigmoid(activation)
 		if self.mode == 'bernoulli':
@@ -23,7 +23,7 @@ class DBN:
 			return p_v_given_h, torch.add(p_v_given_h, torch.normal(mean=0, std=1, size=p_v_given_h.shape))
 
 	def sample_h(self, x, W, hb):
-		wx = torch.mm(x, W.t())
+		wx = torch.mm(x.double(), W.t().double())
 		activation = wx + hb
 		p_h_given_v = torch.sigmoid(activation)
 		if self.mode == 'bernoulli':
@@ -54,7 +54,7 @@ class DBN:
 				vn = self.layers[index-1]
 			hn = self.layers[index]
 
-			rbm = RBM(vn, hn, epochs=100, mode='bernoulli', lr=0.0005, k=10, batch_size=128, gpu=True, optimizer='adam', early_stopping_patience=10)
+			rbm = RBM(vn, hn, epochs=5, mode='bernoulli', lr=0.0005, k=10, batch_size=128, gpu=True, optimizer='adam', early_stopping_patience=10)
 			x_dash = self.generate_input_for_layer(index, x)
 			rbm.train(x_dash)
 			self.layer_parameters[index]['W'] = rbm.W.cpu()
