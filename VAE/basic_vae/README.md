@@ -1,7 +1,7 @@
 # Implementation docs
 
 - **Model:** I implemented the VAE from [this tutorial](https://medium.com/@rekalantar/variational-auto-encoder-vae-pytorch-tutorial-dce2d2fe0f5f) and made it work on our dataset.
-  - Review implementation in [vae.py](vae).py
+  - Review implementation in [vae.py](https://github.com/hakimguenther/BioInfo/blob/basic_vae/VAE/basic_vae/vae.py)
 - **Data**: I used 6 scans from the dataset, loaded all into memory (one pixel, all channels). Full dataset dimension: (462316, 442) so we have 462316 examples (comming from 6 files) each have the 442 intensity values.
   - Below some examples from the training date
   - ![training_examples](https://github.com/hakimguenther/BioInfo/blob/basic_vae/VAE/basic_vae/docs/training_examples_plotted.png)
