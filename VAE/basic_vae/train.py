@@ -1,12 +1,7 @@
 import torch
 import torch.nn as nn
-import numpy as np
 from torch.optim import Adam
-import matplotlib.pyplot as plt
-from torchvision.datasets import MNIST
 from torch.utils.data import DataLoader
-from mpl_toolkits.axes_grid1 import ImageGrid
-from torchvision.utils import save_image, make_grid
 from vae import VAE
 from dataset import BioData
 from utils import visualize_sample, visualize_comparison
@@ -98,11 +93,14 @@ torch.save(model.state_dict(), f'models/average_test_loss_{average_loss}.pth')
 
 
 ### plot examples
-
 num_samples_to_visualize = 5
 min_val = bio_dataset.min_val
 max_val = bio_dataset.max_val
 model.eval()
+
+# setting the testloader to batch size 1
+test_loader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=True)
+
 with torch.no_grad():
     # Assuming test_loader is available and has batch_size of 1 for simplicity
     for i, x in enumerate(test_loader):
