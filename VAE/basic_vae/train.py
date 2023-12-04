@@ -10,14 +10,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 ##### dataset
-dir_path = '/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data'
-bio_dataset = BioData(dir_path)
+bio_dataset = BioData()
 print("number of samples in dataset: ", len(bio_dataset))
 print("shape of first sample: ", bio_dataset[0].shape)
 # visualize_sample(bio_dataset[214], bio_dataset.min_val, bio_dataset.max_val)
 
 # split dataset into training and test set (80/20)
-train_size = int(0.8 * len(bio_dataset))
+train_size = int(0.99 * len(bio_dataset))
 test_size = len(bio_dataset) - train_size
 train_dataset, test_dataset = torch.utils.data.random_split(bio_dataset, [train_size, test_size])
 
@@ -65,7 +64,7 @@ def train(model, optimizer, epochs, device, train_loader):
         print("\tEpoch", epoch + 1, "\tAverage Loss: ", average_loss)
     return overall_loss
 
-train(model, optimizer, epochs=1, device=device, train_loader=train_loader)
+train(model, optimizer, epochs=100, device=device, train_loader=train_loader)
 
 
 ### test the VAE
@@ -102,7 +101,6 @@ model.eval()
 test_loader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=True)
 
 with torch.no_grad():
-    # Assuming test_loader is available and has batch_size of 1 for simplicity
     for i, x in enumerate(test_loader):
         if i >= num_samples_to_visualize:
             break
@@ -113,5 +111,4 @@ with torch.no_grad():
         x_flat = x.view(-1)
         reconstructed_x_flat = reconstructed_x.view(-1)
 
-        visualize_comparison(x_flat, reconstructed_x_flat, min_val, max_val)
-
+        visualize_comparison(x_flat, reconstructed_x_flat, min_val, max_val, i)

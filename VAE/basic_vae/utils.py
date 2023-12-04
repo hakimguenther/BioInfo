@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import torch
+import os
 
 def visualize_sample(tensor, min_val, max_val):
     # Ensure the tensor is on the CPU and convert it to numpy for plotting
@@ -21,7 +21,7 @@ def visualize_sample(tensor, min_val, max_val):
     plt.show()
 
 
-def visualize_comparison(original_tensor, reconstructed_tensor, min_val, max_val):
+def visualize_comparison(original_tensor, reconstructed_tensor, min_val, max_val, plot_id):
     # Ensure both tensors are on the CPU and convert them to numpy for plotting
     if original_tensor.device.type == 'cuda':
         original_tensor = original_tensor.cpu()
@@ -44,5 +44,13 @@ def visualize_comparison(original_tensor, reconstructed_tensor, min_val, max_val
     plt.title('Comparison of Original and Reconstructed Data')
     plt.legend()
     plt.grid(True)
-    plt.show()
 
+    # Save the figure
+    save_dir = 'docs/figures'
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    file_path = os.path.join(save_dir, f'comparison_plot_{plot_id}.png')
+    plt.savefig(file_path)
+    plt.close()
+
+    print(f"Saved plot to {file_path}")
