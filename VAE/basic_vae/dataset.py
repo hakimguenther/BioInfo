@@ -10,6 +10,7 @@ class BioData(Dataset):
 
         base_dir = "/prodi/hpcmem/spots_ftir_uncorr/"
         sub_dirs = ["BC051111", "CO722", "CO1002b", "CO1004", "CO1801a"]
+        # sub_dirs = ["BC051111"]
         
         print("Loading file paths and labels...")
         # Iterate through each specified subdirectory
@@ -34,21 +35,29 @@ class BioData(Dataset):
         # we need to find the min and max values in the dataset to use them in the getitem function for scaling
 
         # Find the global min and max values
-        print("Calculating global min and max values...")
-        self.min_val = float('inf')
-        self.max_val = float('-inf')
+        # print("Calculating global min and max values...")
+        # self.min_val = float('inf')
+        # self.max_val = float('-inf')
 
-        for file_path in tqdm(self.samples, desc="Processing Files"):
-            file_data = np.load(file_path)
-            try:
-                num_samples = file_data.shape[0] * file_data.shape[1]
-                file_data = file_data.reshape(num_samples, -1)
+        # for file_path in tqdm(self.samples, desc="Processing Files"):
+        #     file_data = np.load(file_path)
+        #     try:
+        #         num_samples = file_data.shape[0] * file_data.shape[1]
+        #         file_data = file_data.reshape(num_samples, -1)
 
-                # Update min and max values
-                self.min_val = min(self.min_val, np.min(file_data))
-                self.max_val = max(self.max_val, np.max(file_data))
-            except IndexError:
-                print(f"Unexpected shape in file {file_path}: {file_data.shape}")
+        #         # Update min and max values
+        #         self.min_val = min(self.min_val, np.min(file_data))
+        #         self.max_val = max(self.max_val, np.max(file_data))
+        #     except IndexError:
+        #         print(f"Unexpected shape in file {file_path}: {file_data.shape}")
+        
+        # using hard coded values for min and max values (identified once for all files with label 0)
+        print("Using hard coded min and max values...")
+        self.min_val = -0.40619122982025146
+        self.max_val = 8.0
+
+
+        
         print(f"Min: {self.min_val}, Max: {self.max_val}")
 
     def __len__(self):
