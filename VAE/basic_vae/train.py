@@ -9,7 +9,7 @@ from tqdm import tqdm
 from earlystopper import EarlyStopper
 device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 
-print("Using: ", device)
+print("Using:", device)
 
 def custom_collate(batch):
     # 'batch' is a list of tensors
@@ -92,7 +92,7 @@ model = VAE(input_dim=442, hidden_dim=221, latent_dim=110, device=device).to(dev
 optimizer = Adam(model.parameters(), lr=1e-3)
 
 stopper = EarlyStopper(patience=5, min_delta=0)
-model = train(model, optimizer, epochs=1, device=device, train_loader=train_loader, early_stopper=stopper)
+model = train(model, optimizer, epochs=100, device=device, train_loader=train_loader, early_stopper=stopper)
 
 # test and save the model
 average_loss = test(model, device, test_loader)

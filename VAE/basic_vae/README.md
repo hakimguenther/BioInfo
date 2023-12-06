@@ -1,3 +1,17 @@
+## Next step:
+- [x] Validate that the approach is correct
+- [x] Train on server with all data for 50 epochs
+- Read into the VAE theory in order to advance the archtecture to better capture the data
+- Advice 6.12.2023
+  - track reconstruction loss & KBL seperately
+    - Use KBL for training progress tracking
+  - train on /prodi/hpcmem/spots_ftir_corr/ for comparison
+  - look into beta-vae für gewichtung der loss terms
+  - In current architecture: Add layers to the VAE
+  - Normalize per pixel in get item and always take the same index for the max and min
+  - Test on corrected and uncorrected data
+
+
 # Implementation docs
 
 - **Model:** I implemented the VAE from [this tutorial](https://medium.com/@rekalantar/variational-auto-encoder-vae-pytorch-tutorial-dce2d2fe0f5f) and made it work on our dataset.
@@ -16,10 +30,6 @@
 - **plotting examples**: I plotted a few examples from the training data and the reconstructed data. Below are the plots:
   - ![original_vs_reconstructed](https://github.com/hakimguenther/BioInfo/blob/basic_vae/VAE/basic_vae/docs/original_vs_reconstructed_basic.png)
 
-## Next step:
-- Validate that the approach is correct
-- Train on server with all data for 50 epochs
-- Read into the VAE theory in order to advance the archtecture to better capture the data
 
 
 #### Interestign links for later:

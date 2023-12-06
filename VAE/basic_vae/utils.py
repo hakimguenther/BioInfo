@@ -71,6 +71,39 @@ def visualize_comparison(original_tensor, reconstructed_tensor, min_val, max_val
     plt.savefig(file_path)
     plt.close()
 
+
+def visualize_comparison_local(original_tensor, reconstructed_tensor, min_val, max_val, plot_id):
+    # Ensure both tensors are on the CPU and convert them to numpy for plotting
+    if original_tensor.device.type == 'cuda':
+        original_tensor = original_tensor.cpu()
+    if reconstructed_tensor.device.type == 'cuda':
+        reconstructed_tensor = reconstructed_tensor.cpu()
+    
+    # Rescale both tensors back to their original scale
+    original_tensor = original_tensor * (max_val - min_val) + min_val
+    reconstructed_tensor = reconstructed_tensor * (max_val - min_val) + min_val
+
+    original_data = original_tensor.numpy()
+    reconstructed_data = reconstructed_tensor.numpy()
+
+    # Plotting
+    plt.figure(figsize=(10, 4))
+    plt.plot(original_data, label='Original Data', color='blue')
+    plt.plot(reconstructed_data, label='Reconstructed Data', color='red')
+    plt.xlabel('Channel')
+    plt.ylabel('Value')
+    plt.title('Comparison of Original and Reconstructed Data')
+    plt.legend()
+    plt.grid(True)
+
+    # Save the figure
+    save_dir = '/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE/basic_vae/docs/figures/local_plots'
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    file_path = os.path.join(save_dir, f'comparison_plot_{plot_id}.png')
+    plt.savefig(file_path)
+    plt.close()
+
 def plot_random_samples(batch, model, device, num_samples_to_visualize, min_val, max_val):
     # Ensure the batch is not empty
     if batch.size(0) == 0:
