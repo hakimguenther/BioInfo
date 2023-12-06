@@ -6,32 +6,15 @@ from vae import VAE
 from dataset import BioData
 from utils import visualize_sample, visualize_comparison
 from tqdm import tqdm
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 
-
-##### dataset
-bio_dataset = BioData()
-print("number of samples in dataset: ", len(bio_dataset))
-print("shape of first sample: ", bio_dataset[0].shape)
-# visualize_sample(bio_dataset[214], bio_dataset.min_val, bio_dataset.max_val)
-
-# split dataset into training and test set (80/20)
-train_size = int(0.99 * len(bio_dataset))
-test_size = len(bio_dataset) - train_size
-train_dataset, test_dataset = torch.utils.data.random_split(bio_dataset, [train_size, test_size])
-
-## create dataloader for training
-batch_size = 100
-train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True)
-print("batch size: ", batch_size)
-print("number of batches in train loader: ", len(train_loader))
-print("number of batches in test loader: ", len(test_loader))
-
-
-### train the VAE
-model = VAE(input_dim=442, hidden_dim=221, latent_dim=110, device=device).to(device)
-optimizer = Adam(model.parameters(), lr=1e-3)
+def custom_collate(batch):
+    # 'batch' is a list of tensors
+    # Concatenate tensors along the first dimension (dim=0)
+    batch = [item for item in batch if item.numel() > 0]  # Filter out empty tensors
+    if len(batch) == 0:
+        return torch.empty(0, 442)  # Return an empty tensor with the right shape if batch is empty
+    return torch.cat(batch, dim=0)
 
 def loss_function(x, x_hat, mean, log_var):
     reproduction_loss = nn.functional.binary_cross_entropy(x_hat, x, reduction='sum')
@@ -64,10 +47,6 @@ def train(model, optimizer, epochs, device, train_loader):
         print("\tEpoch", epoch + 1, "\tAverage Loss: ", average_loss)
     return overall_loss
 
-train(model, optimizer, epochs=100, device=device, train_loader=train_loader)
-
-
-### test the VAE
 def test(model, device, test_loader):
     model.eval()  # Set the model to evaluation mode
     test_loss = 0
@@ -86,12 +65,28 @@ def test(model, device, test_loader):
     print("\tTest Set Average Loss: ", average_loss)
     return average_loss
 
-average_loss = test(model, device, test_loader)
+# dataset
+batch_size = 2 # batch 1 = onne scan file
+bio_dataset = BioData()
+train_size = int(0.99 * len(bio_dataset))
+test_size = len(bio_dataset) - train_size
+train_dataset, test_dataset = torch.utils.data.random_split(bio_dataset, [train_size, test_size])
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
+test_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
+print("Total number of scan files considered: ", len(bio_dataset))
+# visualize_sample(bio_dataset[214], bio_dataset.min_val, bio_dataset.max_val)
 
+# train the VAE
+model = VAE(input_dim=442, hidden_dim=221, latent_dim=110, device=device).to(device)
+optimizer = Adam(model.parameters(), lr=1e-3)
+train(model, optimizer, epochs=100, device=device, train_loader=train_loader)
+
+# test and save the model
+average_loss = test(model, device, test_loader)
 torch.save(model.state_dict(), f'models/average_test_loss_{average_loss}.pth')
 
 
-### plot examples
+# plot examples for validation
 num_samples_to_visualize = 5
 min_val = bio_dataset.min_val
 max_val = bio_dataset.max_val
