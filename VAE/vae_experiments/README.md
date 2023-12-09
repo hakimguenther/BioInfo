@@ -1,0 +1,24 @@
+## Next step:
+- [x] Validate that the approach is correct
+- [x] Train on server with all data for 50 epochs
+- Feedback from 6.12.2023
+  - track reconstruction loss & KBL seperately
+    - Use KBL for training progress tracking
+  - train on /prodi/hpcmem/spots_ftir_corr/ for comparison
+  - look into beta-vae für gewichtung der loss terms
+  - In current architecture: Add layers to the VAE
+  - Normalize per pixel in get item and always take the same index for the max and min
+  - Test on corrected and uncorrected data
+- Todos planned 9.12:
+  - [x] Find index of max and min value and hardcode them in getitem (for normalization)
+  - [x] Separate the reconstruction loss and the Kulback-Leibler divergence loss into two different losses
+  - [x] Use combined loss for optimization
+  - [x] Implement using a validation set for validation after each epoch
+  - [x] Use the KBL of the validation set for early stopping
+  - [ ] Implement experiment logging into csv file
+  - [ ] Run experiments on uncorrected data
+    - [ ] Use 3 variations of the VAE
+  - [ ] Run same experiments on corrected data
+    - [ ] Use the same 3 variations of the VAE
+  - [ ] Compare results
+  - [ ] Read into VAE and beta-VAE theory to advance the architecture
