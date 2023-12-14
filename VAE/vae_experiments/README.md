@@ -22,3 +22,8 @@
     - [ ] Use the same 3 variations of the VAE
   - [ ] Compare results
   - [ ] Read into VAE and beta-VAE theory to advance the architecture
+
+## notes
+- Training with fixed indices for normalization is not working:
+  - I cant use cross entropy loss with fixed indices for normalization since the input and target have to be between 0 and 1
+  - When I use MSE or MAE loss, the loss is always nan

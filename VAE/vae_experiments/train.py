@@ -22,14 +22,19 @@ def custom_collate(batch):
     return torch.cat(batch, dim=0)
 
 def loss_function(x, x_hat, mean, log_var):
-    reproduction_loss = reproduction_loss = F.l1_loss(x_hat, x)  # MAE
+    # reproduction_loss = reproduction_loss = F.l1_loss(x_hat, x, reduction='sum')  # MAE
+    # reproduction_loss = reproduction_loss = F.mse_loss(x_hat, x)  # MSE
+    reproduction_loss = nn.functional.binary_cross_entropy(x_hat, x, reduction='sum')
     KLD = - 0.5 * torch.sum(1+ log_var - mean.pow(2) - log_var.exp())
     return reproduction_loss, KLD
 
 def no_reduction_loss_function(x, x_hat, mean, log_var):
     # Calculate Mean Absolute Error (MAE) for each item in the batch
     # Using reduction='none' to keep the loss for each element in the batch
-    reproduction_loss = F.l1_loss(x_hat, x, reduction='none').mean(dim=1)
+    # reproduction_loss = F.l1_loss(x_hat, x, reduction='none').sum(dim=1)
+    # reproduction_loss = F.mse_loss(x_hat, x, reduction='none').sum(dim=1)
+    reproduction_loss = nn.functional.binary_cross_entropy(x_hat, x, reduction='none').sum(dim=1)
+
 
     # Calculate KLD for each item in the batch
     # Sum over the right dimension but do not reduce across the batch
@@ -55,7 +60,7 @@ def train_epoch(model, optimizer, device, train_loader, epoch, epochs):
         reproduction_loss, kdl_loss = loss_function(x, x_hat, mean, log_var)
         
         overall_kdl_loss += kdl_loss.item()
-        overall_reproduction_loss += reproduction_loss.item()
+        overall_reproduction_loss += reproduction_loss.item() 
 
         combined_loss = reproduction_loss + kdl_loss
         
@@ -115,7 +120,9 @@ def train(model, optimizer, epochs, device, train_loader, val_loader, early_stop
         plot_losses(training_losses, validation_losses, experiment_name, docs_dir)
 
         # early stopping
-        if early_stopper.early_stop(val_losses["average_val_kdl_loss"], model):
+        # stop_decision = early_stopper.early_stop(val_losses["average_val_kdl_loss"], model)
+        stop_decision = early_stopper.early_stop(val_losses["average_val_reproduction_loss"] + val_losses["average_val_kdl_loss"], model)
+        if stop_decision:
             model = early_stopper.min_model
             print("early stop")
             break
@@ -130,6 +137,7 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
             x = batch.to(device)
             x_hat, mean, log_var = model(x)
             reconstruction_loss, kdl_loss = no_reduction_loss_function(x, x_hat, mean, log_var)
+            # combined_loss = reconstruction_loss + kdl_loss
             combined_loss = reconstruction_loss + kdl_loss
 
             # Store combined loss and corresponding indices
@@ -140,7 +148,7 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
     sorted_samples = sorted(sample_losses, key=lambda x: x[0])
 
     # Select top and bottom samples based on combined loss
-    selected_samples = sorted_samples[:num_samples_to_visualize] + sorted_samples[-num_samples_to_visualize:]
+    selected_samples = sorted_samples[:num_samples_to_visualize +10] + sorted_samples[-num_samples_to_visualize:]
 
     for comb_loss, kdl_loss, rec_loss, _, x, x_hat in selected_samples:
         # Flatten the tensors to 1D for visualization
@@ -173,30 +181,31 @@ train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=
 val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 print("Total number of scan files considered: ", len(bio_dataset))
 
-# train the VAE
+# # train the VAE
 vae = VAE(input_dim=442, hidden_dim=221, latent_dim=110, device=device).to(device)
 optimizer = Adam(vae.parameters(), lr=1e-3)
 stopper = EarlyStopper(patience=5, min_delta=0)
-vae = train(
-    model=vae,
-    optimizer=optimizer,
-    epochs=100,
-    device=device,
-    train_loader=train_loader,
-    val_loader=val_loader,
-    early_stopper=stopper,
-    experiment_name=experiment_name,
-    docs_dir=os.path.join(experiment_dir, "docs")
-)
-model_dir = os.path.join(experiment_dir, "models")
-if not os.path.exists(model_dir):
-    os.makedirs(model_dir)
-torch.save(vae.state_dict(), f'{model_dir}/{experiment_name}.pth')
+# vae = train(
+#     model=vae,
+#     optimizer=optimizer,
+#     epochs=100,
+#     device=device,
+#     train_loader=train_loader,
+#     val_loader=val_loader,
+#     early_stopper=stopper,
+#     experiment_name=experiment_name,
+#     docs_dir=os.path.join(experiment_dir, "docs")
+# )
 
-# # load the VAE
-# vae = VAE(input_dim=442, hidden_dim=221, latent_dim=110, device=device).to(device)
 # model_dir = os.path.join(experiment_dir, "models")
-# vae.load_state_dict(torch.load(f'{model_dir}/{experiment_name}.pth', map_location=device))
+# if not os.path.exists(model_dir):
+#     os.makedirs(model_dir)
+# torch.save(vae.state_dict(), f'{model_dir}/{experiment_name}.pth')
+
+# load the VAE
+vae = VAE(input_dim=442, hidden_dim=221, latent_dim=110, device=device).to(device)
+model_dir = os.path.join(experiment_dir, "models")
+vae.load_state_dict(torch.load(f'{model_dir}/{experiment_name}.pth', map_location=device))
 
 # plot examples for validation
 plot_dir = os.path.join(experiment_dir, "docs", "figures")

@@ -88,20 +88,28 @@ class BioData(Dataset):
         # load the file
         file_path = self.samples[idx]
         file_data = np.load(file_path)
-        self.data = []
 
         try:
             # Reshape the data such that each pixel becomes a separate sample
             num_samples = file_data.shape[0] * file_data.shape[1]
             file_data = file_data.reshape(num_samples, -1)
-            self.data.append(file_data)
 
-            # Scale each row by using the value of the min and max indices
-            epsilon = 1e-10  # A small constant to prevent division by zero
-            min_values = self.data[0][:, self.min_index]
-            max_values = self.data[0][:, self.max_index]
-            self.data = np.vstack(self.data)
-            self.data = (self.data - min_values[:, np.newaxis]) / (max_values[:, np.newaxis] - min_values[:, np.newaxis] + epsilon)
+            # # Scale each row by using the value of the min and max indices
+            # min_values = file_data[:, self.min_index]
+            # max_values = file_data[:, self.max_index]
+            # min_values = min_values[:, np.newaxis]
+            # max_values = max_values[:, np.newaxis]
+            
+            # min_values should be the minimum value per row
+            min_values = np.min(file_data, axis=1)
+            min_values = min_values[:, np.newaxis]
+            # max_values should be the maximum value per row
+            max_values = np.max(file_data, axis=1)
+            max_values = max_values[:, np.newaxis]
+
+            file_data = np.vstack(file_data)
+            file_data = (file_data - min_values) / (max_values - min_values)
+            # file_data = (file_data - min_values) / (max_values - min_values + 1e-10) # add small value to avoid division by zero
 
         except IndexError:
             print(f"Unexpected shape in file {file_path}: {file_data.shape}")

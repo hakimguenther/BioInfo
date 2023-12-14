@@ -64,13 +64,19 @@ def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name,
     original_data = original_tensor.cpu().numpy()
     reconstructed_data = reconstructed_tensor.cpu().numpy()
 
+    # # Rescale both tensors back to their original scale
+    # min_val = -0.40619122982025146
+    # max_val = 8.0
+    # #original_tensor = original_tensor * (max_val - min_val) + min_val
+    # reconstructed_tensor = reconstructed_tensor * (max_val - min_val) + min_val
+
     # Plotting
     plt.figure(figsize=(10, 4))
     plt.plot(original_data, label='Original Data', color='blue')
     plt.plot(reconstructed_data, label='Reconstructed Data', color='red')
     plt.xlabel('Channel')
     plt.ylabel('Value')
-    plt.title(f'{experiment_name} - Combined Loss: {combined_loss:.4f}, KDL Loss: {kdl_loss:.4f}, Reconstruction Loss (MEA): {reconstruction_loss:.4f}')
+    plt.title(f'{experiment_name} - Combined Loss: {combined_loss:.4f}, KDL Loss: {kdl_loss:.4f}, Reconstruction Loss: {reconstruction_loss:.4f}')
     plt.legend()
     plt.grid(True)
 
