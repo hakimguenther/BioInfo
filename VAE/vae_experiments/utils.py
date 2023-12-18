@@ -70,6 +70,11 @@ def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name,
     # #original_tensor = original_tensor * (max_val - min_val) + min_val
     # reconstructed_tensor = reconstructed_tensor * (max_val - min_val) + min_val
 
+    # in plot_dir create a folder with the name of the experiment
+    save_dir = os.path.join(plot_dir, experiment_name)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
     # Plotting
     plt.figure(figsize=(10, 4))
     plt.plot(original_data, label='Original Data', color='blue')
@@ -80,9 +85,6 @@ def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name,
     plt.legend()
     plt.grid(True)
 
-    # Save the figure
-    if not os.path.exists(plot_dir):
-        os.makedirs(plot_dir)
-    file_path = os.path.join(plot_dir, f'{experiment_name}_comparison_{combined_loss:.4f}.png')
+    file_path = os.path.join(save_dir, f'{experiment_name}_comparison_{combined_loss:.4f}.png')
     plt.savefig(file_path)
     plt.close()
