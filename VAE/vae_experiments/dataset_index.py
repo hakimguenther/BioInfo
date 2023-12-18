@@ -94,18 +94,18 @@ class BioData(Dataset):
             num_samples = file_data.shape[0] * file_data.shape[1]
             file_data = file_data.reshape(num_samples, -1)
 
-            # # Scale each row by using the value of the min and max indices
-            # min_values = file_data[:, self.min_index]
-            # max_values = file_data[:, self.max_index]
-            # min_values = min_values[:, np.newaxis]
-            # max_values = max_values[:, np.newaxis]
-            
-            # min_values should be the minimum value per row
-            min_values = np.min(file_data, axis=1)
+            # Scale each row by using the value of the min and max indices
+            min_values = file_data[:, self.min_index]
+            max_values = file_data[:, self.max_index]
             min_values = min_values[:, np.newaxis]
-            # max_values should be the maximum value per row
-            max_values = np.max(file_data, axis=1)
             max_values = max_values[:, np.newaxis]
+            
+            # # min_values should be the minimum value per row
+            # min_values = np.min(file_data, axis=1)
+            # min_values = min_values[:, np.newaxis]
+            # # max_values should be the maximum value per row
+            # max_values = np.max(file_data, axis=1)
+            # max_values = max_values[:, np.newaxis]
 
             file_data = np.vstack(file_data)
             # file_data = (file_data - min_values) / (max_values - min_values)
