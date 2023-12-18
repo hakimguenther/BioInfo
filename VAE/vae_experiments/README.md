@@ -15,15 +15,12 @@
   - [x] Use combined loss for optimization
   - [x] Implement using a validation set for validation after each epoch
   - [x] Use the KBL of the validation set for early stopping
-  - [ ] Implement experiment logging into csv file
-  - [ ] Run experiments on uncorrected data
-    - [ ] Use 3 variations of the VAE
-  - [ ] Run same experiments on corrected data
-    - [ ] Use the same 3 variations of the VAE
-  - [ ] Compare results
-  - [ ] Read into VAE and beta-VAE theory to advance the architecture
+  - [x] Run experiments on uncorrected data
+  - [x] Run same experiments on corrected data
+  - [ ] Compare results - how? What is a good test to determin which autoencoder is better?
 
 ## notes
 - Training with fixed indices for normalization is not working:
   - I cant use cross entropy loss with fixed indices for normalization since the input and target have to be between 0 and 1
-  - When I use MSE or MAE loss, the loss is always nan
+  - When I use MSE or MAE loss, the loss becomes always nan
+
