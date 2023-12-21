@@ -24,6 +24,12 @@
   - I cant use cross entropy loss with fixed indices for normalization since the input and target have to be between 0 and 1
   - When I use MSE or MAE loss, the loss becomes always nan
 
+## Feedback / Todos 21.12: 
+- Fix normalization: increase constant 
+- If normalization works train mostly on corrected data (but test both)
+- Result plotting: use z for dimensionality reduction: TSNE, PCA and plot this
+- Run experiments if training works, produce plots for all experiments
+
 ## Proposal further development:
 
 #### Model Training
