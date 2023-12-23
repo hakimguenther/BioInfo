@@ -32,13 +32,13 @@ def plot_losses(training_losses, validation_losses, experiment_name, docs_dir):
 
     plt.figure(figsize=(12, 6))
 
-    # Subplot for KDL loss
+    # Subplot for KLD loss
     plt.subplot(1, 2, 1)
-    plt.plot(epochs, training_kdl_losses, label='Average Training KDL Loss', color='blue', marker='o')
-    plt.plot(epochs, validation_kdl_losses, label='Average Validation KDL Loss', color='red', marker='o')
+    plt.plot(epochs, training_kdl_losses, label='Average Training KLD Loss', color='blue', marker='o')
+    plt.plot(epochs, validation_kdl_losses, label='Average Validation KLD Loss', color='red', marker='o')
     plt.xlabel('Epoch')
-    plt.ylabel('Average KDL Loss')
-    plt.title('KDL Loss Over Epochs')
+    plt.ylabel('Average KLD Loss')
+    plt.title('KLD Loss Over Epochs')
     plt.legend()
     plt.grid(True)
 
@@ -81,7 +81,7 @@ def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name,
     plt.plot(reconstructed_data, label='Reconstructed Data', color='red')
     plt.xlabel('Channel')
     plt.ylabel('Value')
-    plt.title(f'{experiment_name} - Combined Loss: {combined_loss:.4f}, KDL Loss: {kdl_loss:.4f}, Reconstruction Loss: {reconstruction_loss:.4f}')
+    plt.title(f'{experiment_name} - Combined Loss: {combined_loss:.4f}, KLD Loss: {kdl_loss:.4f}, Reconstruction Loss: {reconstruction_loss:.4f}')
     plt.legend()
     plt.grid(True)
 

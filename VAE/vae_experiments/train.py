@@ -22,22 +22,12 @@ def custom_collate(batch):
     return torch.cat(batch, dim=0)
 
 def loss_function(x, x_hat, mean, log_var):
-    # reproduction_loss = reproduction_loss = F.l1_loss(x_hat, x, reduction='sum')  # MAE
-    # reproduction_loss = reproduction_loss = F.mse_loss(x_hat, x)  # MSE
-    reproduction_loss = nn.functional.binary_cross_entropy(x_hat, x, reduction='sum')
+    reproduction_loss = reproduction_loss = F.mse_loss(x_hat, x, reduction='sum')  # MSE
     KLD = - 0.5 * torch.sum(1+ log_var - mean.pow(2) - log_var.exp())
     return reproduction_loss, KLD
 
 def no_reduction_loss_function(x, x_hat, mean, log_var):
-    # Calculate Mean Absolute Error (MAE) for each item in the batch
-    # Using reduction='none' to keep the loss for each element in the batch
-    # reproduction_loss = F.l1_loss(x_hat, x, reduction='none').sum(dim=1)
-    # reproduction_loss = F.mse_loss(x_hat, x, reduction='none').sum(dim=1)
-    reproduction_loss = nn.functional.binary_cross_entropy(x_hat, x, reduction='none').sum(dim=1)
-
-
-    # Calculate KLD for each item in the batch
-    # Sum over the right dimension but do not reduce across the batch
+    reproduction_loss = F.mse_loss(x_hat, x, reduction='none').sum(dim=1)
     KLD = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp(), dim=1)
     return reproduction_loss, KLD
 
@@ -120,8 +110,6 @@ def train(model, optimizer, epochs, device, train_loader, val_loader, early_stop
         plot_losses(training_losses, validation_losses, experiment_name, docs_dir)
 
         # early stopping
-        # stop_decision = early_stopper.early_stop(val_losses["average_val_kdl_loss"], model)     
-        # stop_decision = early_stopper.early_stop(val_losses["average_val_reproduction_loss"], model)
         stop_decision = early_stopper.early_stop(val_losses["average_val_reproduction_loss"] + val_losses["average_val_kdl_loss"], model)
         if stop_decision:
             model = early_stopper.min_model
@@ -160,26 +148,26 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
         visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss)
 
 
-# dataset cluster
-base_dir = "/prodi/hpcmem/spots_ftir_uncorr/"
-sub_dirs = ["BC051111", "CO722", "CO1002b", "CO1004", "CO1801a"]
-# sub_dirs = ["BC051111"]
-bio_dataset = BioData(base_dir, sub_dirs, use_labels=True, search_min_max_index=False)
-batch_size = 4
-experiment_name = "all_uncorr_data_scaled_with_individually_calculated_min_max_optimized_combined_loss"
-experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
-train_size = int(0.99 * len(bio_dataset))
-val_size = len(bio_dataset) - train_size
-
-# # experiment setup
-# base_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo"
-# sub_dirs = ["data"]
-# bio_dataset = BioData(base_dir, sub_dirs, use_labels=False, search_min_max_index=False)
-# batch_size = 2
+# # dataset cluster
+# base_dir = "/prodi/hpcmem/spots_ftir_uncorr/"
+# sub_dirs = ["BC051111", "CO722", "CO1002b", "CO1004", "CO1801a"]
+# # sub_dirs = ["BC051111"]
+# bio_dataset = BioData(base_dir, sub_dirs, use_labels=True)
+# batch_size = 4
 # experiment_name = "debug"
-# experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE/vae_experiments"
-# train_size = 5
+# experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
+# train_size = int(0.99 * len(bio_dataset))
 # val_size = len(bio_dataset) - train_size
+
+# experiment setup
+base_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data"
+sub_dirs = ["normal_corr"]
+bio_dataset = BioData(base_dir, sub_dirs, use_labels=False)
+batch_size = 1
+experiment_name = "debug"
+experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE/vae_experiments"
+train_size = 3
+val_size = len(bio_dataset) - train_size
 
 # batch 1 = one scan file
 train_dataset, val_dataset = torch.utils.data.random_split(bio_dataset, [train_size, val_size])
