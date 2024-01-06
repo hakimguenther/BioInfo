@@ -1,3 +1,9 @@
+# I want to modify the following script such that i get at the end a csv file with the following columns: normal_uncorr_train, normal_uncorr_test, normal_uncorr_val and normal_corr_train, normal_corr_test, normal_corr_val.
+# I dont need these splits for the abnormal data but I want two columns for the abnormal data: abnormal_uncorr and abnormal_corr
+# the content of all columns should be the full file path to the respective file
+# The first step in the script should be to elicit all file in the respective categories, then we create the splits: 80% train, 10% test, 10% val 
+# use pandas to create the csv file
+
 import os
 import numpy as np
 import shutil

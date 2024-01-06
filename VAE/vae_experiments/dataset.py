@@ -1,41 +1,20 @@
-import os
 import numpy as np
 import torch
 from torch.utils.data import Dataset
+import pandas as pd
 
 class BioData(Dataset):
-    def __init__(self, base_dir, sub_dirs, use_labels=True):
+    def __init__(self, csv_path, column_name):
         self.samples = []
 
-        # Iterate through each specified subdirectory
-        for sub_dir in sub_dirs:
-            if use_labels:
-                dir_path = os.path.join(base_dir, sub_dir)
-                label_path = os.path.join(dir_path, 'label.npy')
-                labels = np.load(label_path)
+        # Read the CSV file
+        df = pd.read_csv(csv_path)
 
-                # Filter out the data points with label 1
-                valid_indices = np.where(labels == 0)[0]
+        # Get the column of interest
+        file_paths = df[column_name].to_list()
+        # trim file paths where nan or none
+        self.samples  = [x for x in file_paths if str(x) != 'nan']
 
-                # Create a list of file paths for valid data points
-                for idx in valid_indices:
-                    file_name = f"data{idx}.npy"
-                    file_path = os.path.join(dir_path, file_name)
-                    if os.path.exists(file_path):
-                        self.samples.append(file_path)
-                        # print(f"Added {file_path}")
-                    else:
-                        print(f"File {file_name} not found in {dir_path}")
-            else:
-                # add all npy files in the sub_dir to the samples list
-                dir_path = os.path.join(base_dir, sub_dir)
-                for file_name in os.listdir(dir_path):
-                    if file_name.endswith(".npy"):
-                        file_path = os.path.join(dir_path, file_name)
-                        self.samples.append(file_path)
-                    else:
-                        print(f"File {file_name} not found in {dir_path}")
-        
     def __len__(self):
         return len(self.samples)
 
@@ -48,7 +27,7 @@ class BioData(Dataset):
         num_samples = file_data.shape[0] * file_data.shape[1]
         file_data = file_data.reshape(num_samples, -1)
 
-        # Scaling technique 1: min-max scaling with hard coded indices where min and max values are located
+        # min-max scaling with hard coded indices where min and max values are located
         min_values = file_data[:, 0]
         max_values = file_data[:, 356]
 
