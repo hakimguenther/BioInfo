@@ -27,24 +27,34 @@ class BioData(Dataset):
         num_samples = file_data.shape[0] * file_data.shape[1]
         file_data = file_data.reshape(num_samples, -1)
 
-        # min-max scaling with hard coded indices where min and max values are located
-        min_values = file_data[:, 0]
-        max_values = file_data[:, 356]
+        ### scaling approach 1: min-max scaling with fixed indices where min and max values should be located
+        # # min-max scaling with hard coded indices where min and max values are located
+        # min_values = file_data[:, 0]
+        # max_values = file_data[:, 356]
 
-        # Identify rows where max is not greater than min
-        valid_rows = max_values > min_values
+        # # Identify rows where max is not greater than min
+        # valid_rows = max_values > min_values
 
-        # if not np.all(valid_rows):
-        #     print(f"Removing {np.sum(~valid_rows)} of {len(valid_rows)} invalid rows due to max <= min issue.")
+        # # if not np.all(valid_rows):
+        # #     print(f"Removing {np.sum(~valid_rows)} of {len(valid_rows)} invalid rows due to max <= min issue.")
 
-        # Filter out the invalid rows
-        file_data = file_data[valid_rows.flatten(), :]
-        min_values = min_values[valid_rows]
-        max_values = max_values[valid_rows]
+        # # Filter out the invalid rows
+        # file_data = file_data[valid_rows.flatten(), :]
+        # min_values = min_values[valid_rows]
+        # max_values = max_values[valid_rows]
 
-        # Ensure min_values and max_values are broadcastable across all columns of file_data
+        # # Ensure min_values and max_values are broadcastable across all columns of file_data
+        # min_values = min_values[:, np.newaxis]
+        # max_values = max_values[:, np.newaxis]
+
+        ### scaling approach 2: min-max scaling with min and max values per row
+        # min_values should be the minimum value per row
+        min_values = np.min(file_data, axis=1)
         min_values = min_values[:, np.newaxis]
+        # max_values should be the maximum value per row
+        max_values = np.max(file_data, axis=1)
         max_values = max_values[:, np.newaxis]
+
 
         # Scale the data
         file_data = (file_data - min_values) / (max_values - min_values + 1e-7) # add small value to avoid division by zero

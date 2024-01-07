@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-from vae import VAE_2
+from vae import VAE_1, VAE_2
 from dataset import BioData
 from utils import plot_losses, visualize_comparison
 from tqdm import tqdm
@@ -150,12 +150,68 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
         visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss)
 
 
-# experiment setup
-experiment_name = "corr_vae_2"
+
+############################### train vae 1 ###############################
+experiment_name = "uncorr_vae_1_row_wise_scaling"
 experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
 csv_path = os.path.join(experiment_dir, "data_splits.csv")
-train_dataset = BioData(csv_path, "normal_corr_train")
-val_dataset = BioData(csv_path, "normal_corr_val")
+train_dataset = BioData(csv_path, "normal_uncorr_train")
+val_dataset = BioData(csv_path, "normal_uncorr_val")
+batch_size = 2
+learning_rate = 1e-3
+patience = 5
+nr_epochs = 100
+
+train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
+val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
+
+# # train the VAE
+model = VAE_1(device=device).to(device)
+optimizer = Adam(model.parameters(), lr=learning_rate)
+stopper = EarlyStopper(patience=patience, min_delta=0)
+train(
+    model=model,
+    optimizer=optimizer,
+    epochs=nr_epochs,
+    device=device,
+    train_loader=train_loader,
+    val_loader=val_loader,
+    early_stopper=stopper,
+    experiment_name=experiment_name,
+    docs_dir=os.path.join(experiment_dir, "docs")
+)
+
+# load the VAE
+model = VAE_1(device=device).to(device)
+model_dir = os.path.join(experiment_dir, "models")
+model.load_state_dict(torch.load(f'{model_dir}/{experiment_name}.pth', map_location=device))
+
+# Evaluate the model
+plot_dir = os.path.join(experiment_dir, "docs", "figures")
+plot_good_and_bad_samples(val_loader, model, device, 5, experiment_name, plot_dir)
+
+# Input parameters (example usage)
+csv_path = os.path.join(experiment_dir, "data_splits.csv")
+normal_dataset = BioData(csv_path, "normal_uncorr_test")
+abnormal_dataset = BioData(csv_path, "abnormal_uncorr")
+docs_path = os.path.join(experiment_dir, "docs", "figures", experiment_name)
+batch_size = 1
+
+
+normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
+abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
+
+# Call main function
+test_model(model, normal_loader, abnormal_loader, docs_path, device)
+
+
+############################### train vae 2 ###############################
+# experiment setup
+experiment_name = "uncorr_vae_2_row_wise_scaling"
+experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
+csv_path = os.path.join(experiment_dir, "data_splits.csv")
+train_dataset = BioData(csv_path, "normal_uncorr_train")
+val_dataset = BioData(csv_path, "normal_cunorr_val")
 batch_size = 2
 learning_rate = 1e-3
 patience = 5
@@ -190,10 +246,9 @@ plot_dir = os.path.join(experiment_dir, "docs", "figures")
 plot_good_and_bad_samples(val_loader, model, device, 5, experiment_name, plot_dir)
 
 # Input parameters (example usage)
-device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 csv_path = os.path.join(experiment_dir, "data_splits.csv")
-normal_dataset = BioData(csv_path, "normal_corr_test")
-abnormal_dataset = BioData(csv_path, "abnormal_corr")
+normal_dataset = BioData(csv_path, "normal_uncorr_test")
+abnormal_dataset = BioData(csv_path, "abnormal_uncorr")
 docs_path = os.path.join(experiment_dir, "docs", "figures", experiment_name)
 batch_size = 1
 
