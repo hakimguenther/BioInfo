@@ -1,10 +1,9 @@
 import torch
-import torch.nn.functional as F
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-from vae import VAE_1, VAE_2
+from vae import VAE_2
 from dataset import BioData
-from utils import plot_losses, visualize_comparison
+from utils import plot_losses, visualize_comparison, loss_function, no_reduction_loss_function
 from tqdm import tqdm
 from earlystopper import EarlyStopper
 import os
@@ -14,22 +13,10 @@ device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 print("Using:", device)
 
 def custom_collate(batch):
-    # 'batch' is a list of tensors
-    # Concatenate tensors along the first dimension (dim=0)
     batch = [item for item in batch if item.numel() > 0]  # Filter out empty tensors
     if len(batch) == 0:
         return torch.empty(0, 442)  # Return an empty tensor with the right shape if batch is empty
     return torch.cat(batch, dim=0)
-
-def loss_function(x, x_hat, mean, log_var):
-    reproduction_loss = reproduction_loss = F.mse_loss(x_hat, x, reduction='sum')  # MSE
-    KLD = - 0.5 * torch.sum(1+ log_var - mean.pow(2) - log_var.exp())
-    return reproduction_loss, KLD
-
-def no_reduction_loss_function(x, x_hat, mean, log_var):
-    reproduction_loss = F.mse_loss(x_hat, x, reduction='none').sum(dim=1)
-    KLD = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp(), dim=1)
-    return reproduction_loss, KLD
 
 def train_epoch(model, optimizer, device, train_loader, epoch, epochs):
     model.train()
@@ -39,8 +26,8 @@ def train_epoch(model, optimizer, device, train_loader, epoch, epochs):
         "average_training_kdl_loss": 0,
         "average_training_reproduction_loss": 0
     }
-    progress_bar = tqdm(train_loader, total=len(train_loader), desc=f"Epoch {epoch + 1}/{epochs}")
-    for x in progress_bar:
+    # progress_bar = tqdm(train_loader, total=len(train_loader), desc=f"Epoch {epoch + 1}/{epochs}")
+    for x in train_loader:
 
         x = x.to(device)
 
@@ -60,11 +47,11 @@ def train_epoch(model, optimizer, device, train_loader, epoch, epochs):
         optimizer.step()
 
         # Update progress bar description with the current loss
-        progress_bar.set_description(f"Train epoch {epoch + 1}/{epochs} KDL Loss: {kld_loss.item():.4f}, Reproduction Loss: {reproduction_loss.item():.4f}")
+        # progress_bar.set_description(f"Train epoch {epoch + 1}/{epochs} KDL Loss: {kld_loss.item():.4f}, Reproduction Loss: {reproduction_loss.item():.4f}")
 
     losses["average_training_kdl_loss"] = overall_kdl_loss / len(train_loader.dataset)
     losses["average_training_reproduction_loss"] = overall_reproduction_loss / len(train_loader.dataset)
-    print("Epoch", epoch + 1, "Average Training KDL Loss: ", losses["average_training_kdl_loss"], "Average Training Reproduction Loss: ", losses["average_training_reproduction_loss"])
+    # print("Epoch", epoch + 1, "Average Training KDL Loss: ", losses["average_training_kdl_loss"], "Average Training Reproduction Loss: ", losses["average_training_reproduction_loss"])
     return model, losses
 
 def validate_checkpoint(model, device, val_loader, epoch):
@@ -91,13 +78,14 @@ def validate_checkpoint(model, device, val_loader, epoch):
 
         losses["average_val_kdl_loss"] = overall_kdl_loss / len(val_loader.dataset)
         losses["average_val_reproduction_loss"] = overall_reproduction_loss / len(val_loader.dataset)
-        print("Epoch", epoch + 1, "Average Val KDL Loss: ", losses["average_val_kdl_loss"], "Average Val Reproduction Loss: ", losses["average_val_reproduction_loss"])
+        # print("Epoch", epoch + 1, "Average Val KDL Loss: ", losses["average_val_kdl_loss"], "Average Val Reproduction Loss: ", losses["average_val_reproduction_loss"])
     return losses
 
 def train(model, optimizer, epochs, device, train_loader, val_loader, early_stopper, experiment_name="", docs_dir="docs"):
     training_losses = []
     validation_losses = []
-    for epoch in range(epochs):
+    progress_bar = tqdm(range(epochs), total=epochs, desc=f"Epoch 0/{epochs}")
+    for epoch in progress_bar:
         # train
         model, train_losses = train_epoch(model, optimizer, device, train_loader, epoch, epochs)
         training_losses.append(train_losses)
@@ -117,9 +105,14 @@ def train(model, optimizer, epochs, device, train_loader, val_loader, early_stop
             experiment_name
             )
         
+        # save last model
+        early_stopper.save_model(model, docs_dir, experiment_name + "_last")
+        
         if stop_decision:
             print("early stop")
             break
+
+        progress_bar.set_description(f"Epoch {epoch + 1}/{epochs}")
 
 def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualize, experiment_name, plot_dir):
     model.eval()
@@ -150,77 +143,22 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
         visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss)
 
 
-############################### train vae 1 ###############################
-experiment_name = "corr_vae_1_row_wise_scaling"
+experiment_name = "corr_vae_2"
 experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
-csv_path = os.path.join(experiment_dir, "data_splits.csv")
-train_dataset = BioData(csv_path, "normal_corr_train")
-val_dataset = BioData(csv_path, "normal_corr_val")
-batch_size = 2
-learning_rate = 1e-3
-patience = 5
-nr_epochs = 100
+# experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE/vae_experiments"
+data_splits_json = os.path.join(experiment_dir, "data_splits.json")
+# data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
+train_dataset = BioData(data_splits_json, "normal_corr_train")
+val_dataset = BioData(data_splits_json, "normal_corr_val")
+batch_size = 4
+learning_rate = 1e-4
+patience = 1000
+nr_epochs = 1000
 
 train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
-# # train the VAE
-model = VAE_1(device=device).to(device)
-optimizer = Adam(model.parameters(), lr=learning_rate)
-stopper = EarlyStopper(patience=patience, min_delta=0)
-train(
-    model=model,
-    optimizer=optimizer,
-    epochs=nr_epochs,
-    device=device,
-    train_loader=train_loader,
-    val_loader=val_loader,
-    early_stopper=stopper,
-    experiment_name=experiment_name,
-    docs_dir=os.path.join(experiment_dir, "docs")
-)
-
-# load the VAE
-model = VAE_1(device=device).to(device)
-model_dir = os.path.join(experiment_dir, "models")
-model.load_state_dict(torch.load(f'{model_dir}/{experiment_name}.pth', map_location=device))
-
-# Evaluate the model
-plot_dir = os.path.join(experiment_dir, "docs", "figures")
-plot_good_and_bad_samples(val_loader, model, device, 5, experiment_name, plot_dir)
-
-# Input parameters (example usage)
-csv_path = os.path.join(experiment_dir, "data_splits.csv")
-normal_dataset = BioData(csv_path, "normal_corr_test")
-abnormal_dataset = BioData(csv_path, "abnormal_corr")
-docs_path = os.path.join(experiment_dir, "docs", "figures", experiment_name)
-batch_size = 1
-
-
-normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
-abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
-
-# Call main function
-test_model(model, normal_loader, abnormal_loader, docs_path, device)
-
-
-
-############################### train vae 2 ###############################
-# experiment setup
-experiment_name = "corr_vae_2_row_wise_scaling"
-experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
-csv_path = os.path.join(experiment_dir, "data_splits.csv")
-train_dataset = BioData(csv_path, "normal_corr_train")
-val_dataset = BioData(csv_path, "normal_corr_val")
-batch_size = 2
-learning_rate = 1e-3
-patience = 5
-nr_epochs = 100
-
-train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
-val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
-
-# # train the VAE
+# train the VAE
 model = VAE_2(device=device).to(device)
 optimizer = Adam(model.parameters(), lr=learning_rate)
 stopper = EarlyStopper(patience=patience, min_delta=0)
@@ -236,25 +174,22 @@ train(
     docs_dir=os.path.join(experiment_dir, "docs")
 )
 
+
 # load the VAE
 model = VAE_2(device=device).to(device)
 model_dir = os.path.join(experiment_dir, "models")
-model.load_state_dict(torch.load(f'{model_dir}/{experiment_name}.pth', map_location=device))
+model_postfix = "_best"
+model.load_state_dict(torch.load(f'{model_dir}/{experiment_name}{model_postfix}.pth', map_location=device))
+
+# Test Sets
+normal_dataset = BioData(data_splits_json, "normal_corr_test")
+abnormal_dataset = BioData(data_splits_json, "abnormal_corr")
+normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
 
 # Evaluate the model
 plot_dir = os.path.join(experiment_dir, "docs", "figures")
-plot_good_and_bad_samples(val_loader, model, device, 5, experiment_name, plot_dir)
-
-# Input parameters (example usage)
-csv_path = os.path.join(experiment_dir, "data_splits.csv")
-normal_dataset = BioData(csv_path, "normal_corr_test")
-abnormal_dataset = BioData(csv_path, "abnormal_corr")
 docs_path = os.path.join(experiment_dir, "docs", "figures", experiment_name)
-batch_size = 1
 
-
-normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
-abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
-
-# Call main function
+plot_good_and_bad_samples(val_loader, model, device, 5, experiment_name, plot_dir)
 test_model(model, normal_loader, abnormal_loader, docs_path, device)

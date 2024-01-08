@@ -1,18 +1,10 @@
 import torch
-import torch.nn.functional as F
 import numpy as np
 import os
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-import random
-from tqdm import tqdm
-
-# Utility Functions
-def no_reduction_loss_function(x, x_hat, mean, log_var):
-    reproduction_loss = F.mse_loss(x_hat, x, reduction='none').sum(dim=1)
-    KLD = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp(), dim=1)
-    return reproduction_loss, KLD
+from utils import no_reduction_loss_function
 
 def score_sample(model, sample, device):
     model.eval()  # Set the model to evaluation mode
@@ -28,16 +20,17 @@ def score_sample(model, sample, device):
 
 def evaluate_model(model, loader, device):
     model.eval()  # Set the model to evaluation mode
-    klds, rc_losses = [], []
+    zs, klds, rc_losses = [], [], []
     with torch.no_grad():  # Disable gradient calculation for efficiency
         for x in loader:
             x = x.to(device)
-            x_hat, z, mean, log_var = model(x)
+            x_hat, mean, log_var, z = model(x)
             rc_loss, kld = no_reduction_loss_function(x, x_hat, mean, log_var)
+            zs.append(z.cpu().numpy())
             klds.append(kld.cpu().numpy())
             rc_losses.append(rc_loss.cpu().numpy())
-    return np.concatenate(klds), np.concatenate(rc_losses)
 
+    return np.concatenate(zs), np.concatenate(klds), np.concatenate(rc_losses)
 
 # Plotting Functions
 def plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss, kld_scale_factor=1000):
@@ -69,7 +62,7 @@ def plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss,
     fig.canvas.draw()  # Draw the canvas
     image_rgba = np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8)  # Capture as a string buffer and convert to NumPy array
     image_rgba = image_rgba.reshape(fig.canvas.get_width_height()[::-1] + (4,))  # Reshape to image dimensions
-    
+
     # Convert RGBA to RGB (discard the alpha channel)
     image_rgb = image_rgba[:, :, :3]
 
@@ -186,6 +179,7 @@ def plot_tsne(normal_z, abnormal_z):
     # Concatenate the normal and abnormal z values and perform t-SNE
     all_z_values = np.vstack((normal_z, abnormal_z))  # Stack the z values vertically
     tsne = TSNE(n_components=2, random_state=42)  # Initialize t-SNE to reduce to 2 components
+    # TODO set perplexity to 5 # take every 10th pixel
     tsne_components = tsne.fit_transform(all_z_values)  # Fit and transform the data
 
     # Split the transformed data back into normal and abnormal parts
@@ -244,8 +238,9 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device):
     if not os.path.exists(docs_path):
         os.makedirs(docs_path)
 
-    normal_kld, normal_rc_loss = evaluate_model(model, normal_loader, device)
-    abnormal_kld, abnormal_rc_loss = evaluate_model(model, abnormal_loader, device)
+    normal_z, normal_kld, normal_rc_loss = evaluate_model(model, normal_loader, device)
+    abnormal_z, abnormal_kld, abnormal_rc_loss = evaluate_model(model, abnormal_loader, device)
+    
     # calculate the total mean difference in kld and rc_loss
     mean_normal_kld = np.mean(normal_kld)
     mean_abnormal_kld = np.mean(abnormal_kld)
@@ -254,46 +249,32 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device):
     diff_kld = mean_abnormal_kld - mean_normal_kld
     diff_rc_loss = mean_abnormal_rc_loss - mean_normal_rc_loss
 
-    progress_bar = tqdm(enumerate(abnormal_loader), total=len(abnormal_loader), desc='Generating Plots', position=0)
+    # Generate and save plots
+    mean_fig = plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss)
+    rc_kld_scatter = plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld)
+    pcs_fig = plot_pca(normal_z, abnormal_z)
+    # tsne_fig = plot_tsne(normal_z, abnormal_z)
 
+    # Create a 1x4 grid of subplots
+    fig, axs = plt.subplots(3, 1, figsize=(8, 12), dpi=300)
 
-    for i, abnormal_sample in progress_bar:
-        # Randomly select a normal sample
-        normal_sample = random.choice([x for x in normal_loader])
+    # Insert each plot into the grid
+    axs[0].imshow(mean_fig)
+    axs[1].imshow(rc_kld_scatter)
+    axs[2].imshow(pcs_fig)
+    # axs[3].imshow(tsne_fig)
 
-        # Evaluate the model on the normal and abnormal samples
-        normal_z, normal_kld, normal_rc_loss = score_sample(model, normal_sample, device)
-        abnormal_z, abnormal_kld, abnormal_rc_loss = score_sample(model, abnormal_sample, device)
+    # Set titles for subplots
+    axs[0].set_title(f'Total Mean Diff KLD: {diff_kld:.6f}, Diff. RC Loss: {diff_rc_loss:.6f}')
+    axs[1].set_title('RC Loss vs KLD Scatter')
+    axs[2].set_title('PCA of Z Values')
+    # axs[3].set_title('t-SNE of Z Values')
 
-        # Generate and save plots
-        mean_fig = plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss)
-        rc_kld_scatter = plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld)
-        pcs_fig = plot_pca(normal_z, abnormal_z)
-        # tsne_fig = plot_tsne(normal_z, abnormal_z)
+    # Remove axes for each subplot
+    for ax in axs:
+        ax.axis('off')
 
-        # Create a 1x4 grid of subplots
-        fig, axs = plt.subplots(3, 1, figsize=(8, 12), dpi=300)
-
-        # Insert each plot into the grid
-        axs[0].imshow(mean_fig)
-        axs[1].imshow(rc_kld_scatter)
-        axs[2].imshow(pcs_fig)
-        # axs[3].imshow(tsne_fig)
-
-        # Set titles for subplots
-        axs[0].set_title(f'Total Mean Diff KLD: {diff_kld:.6f}, Diff. RC Loss: {diff_rc_loss:.6f}')
-        axs[1].set_title('RC Loss vs KLD Scatter')
-        axs[2].set_title('PCA of Z Values')
-        # axs[3].set_title('t-SNE of Z Values')
-
-        # Remove axes for each subplot
-        for ax in axs:
-            ax.axis('off')
-
-        plt.tight_layout()
-        plt.savefig(f"{docs_path}/combined_plots_{i}.png")  # Save the combined plot
-        plt.close(fig)  # Close the figure to free up memory
-
-        progress_bar.set_description(f"Generating Plots {i}/{len(abnormal_loader)}")
-        
+    plt.tight_layout()
+    plt.savefig(f"{docs_path}/eval_plot.png")  # Save the combined plot
+    plt.close(fig)  # Close the figure to free up memory    
 

@@ -58,3 +58,18 @@
 
 #### Expected Outcome
 - Identification of the VAE configuration that best distinguishes between normal and anomalous pixels, leveraging the unique properties of VAEs in capturing data distributions.
+
+
+### feedback 8.01.2024
+- [ ] Überprüfen ob die richtigen Daten für das training ausgewählt werden
+- [ ] Vae Training:
+  - [ ] Nur auf Corr trainieren & ohne scaling
+  - [ ] VAE länger trainieren (200 epochs)
+  - [ ] USE MAE loss
+- [ ] Training loss Plot:
+  - [ ] Log scala
+  - [ ] Letzte Wert anzeigen
+- [ ] Model Evaluation plot:
+  - [ ] Alles pixel in einem Plot
+  - [ ] Mit Hakim Testdatensätze absprechen
+  - [ ] t-SNE ausprobieren mit jedem 10 pixel & perplexity 5

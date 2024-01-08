@@ -50,36 +50,41 @@ class VAE_1(nn.Module):
     
 
 class VAE_2(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, latent_size=10):
         super(VAE_2, self).__init__()
 
         self.device = device
 
         # encoder
         self.encoder = nn.Sequential(
-            nn.Linear(442, 221),
+            nn.Linear(442, 300),
+            nn.BatchNorm1d(300),
             nn.LeakyReLU(0.2),
-            nn.Linear(221, 110),
+            nn.Dropout(0.5),
+            nn.Linear(300, 150),
+            nn.BatchNorm1d(150),
             nn.LeakyReLU(0.2),
-            nn.Linear(110, 55),
+            nn.Dropout(0.5),
+            nn.Linear(150, 75),
             nn.LeakyReLU(0.2)
             )
         
         # latent mean and variance 
-        self.mean_layer = nn.Linear(55, 2)
-        self.logvar_layer = nn.Linear(55, 2)
+        self.mean_layer = nn.Linear(75, latent_size)
+        self.logvar_layer = nn.Linear(75, latent_size)
         
         # decoder
         self.decoder = nn.Sequential(
-            nn.Linear(2, 55),
+            nn.Linear(latent_size, 75),
             nn.LeakyReLU(0.2),
-            nn.Linear(55, 110),
+            nn.Linear(75, 150),
             nn.LeakyReLU(0.2),
-            nn.Linear(110, 221),
+            nn.Linear(150, 300),
             nn.LeakyReLU(0.2),
-            nn.Linear(221, 442),
+            nn.Linear(300, 442),
             nn.Sigmoid()
             )      
+
 
     def encode(self, x):
         x = self.encoder(x)
