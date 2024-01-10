@@ -40,7 +40,7 @@ def plot_losses(training_losses, validation_losses, experiment_name, docs_dir):
     plt.legend()
     plt.grid(True)
     # Annotate the last number for training
-    plt.text(epochs[-1], training_kdl_losses[-1], f'{training_kdl_losses[-1]:.2f}')
+    # plt.text(epochs[-1], training_kdl_losses[-1], f'{training_kdl_losses[-1]:.2f}')
     # Annotate the last number for validation
     plt.text(epochs[-1], validation_kdl_losses[-1], f'{validation_kdl_losses[-1]:.2f}')
 
@@ -55,7 +55,7 @@ def plot_losses(training_losses, validation_losses, experiment_name, docs_dir):
     plt.legend()
     plt.grid(True)
     # Annotate the last number for training
-    plt.text(epochs[-1], training_reproduction_losses[-1], f'{training_reproduction_losses[-1]:.2f}')
+    # plt.text(epochs[-1], training_reproduction_losses[-1], f'{training_reproduction_losses[-1]:.2f}')
     # Annotate the last number for validation
     plt.text(epochs[-1], validation_reproduction_losses[-1], f'{validation_reproduction_losses[-1]:.2f}')
 

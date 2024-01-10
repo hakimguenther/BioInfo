@@ -143,7 +143,7 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
         visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss)
 
 
-experiment_name = "corr_vae_1"
+experiment_name = "corr_vae_1_cont_1"
 experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
 # experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE/vae_experiments"
 data_splits_json = os.path.join(experiment_dir, "data_splits.json")
@@ -152,14 +152,18 @@ train_dataset = BioData(data_splits_json, "normal_corr_train")
 val_dataset = BioData(data_splits_json, "normal_corr_val")
 batch_size = 4
 learning_rate = 1e-4
-patience = 1000
-nr_epochs = 1000
+patience = 600
+nr_epochs = 2000
 
 train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
 # train the VAE
 model = VAE_1(device=device).to(device)
+model_dir = os.path.join(experiment_dir, "models")
+stat_model_name = "corr_vae_1_last.pth"
+model.load_state_dict(torch.load(f'{model_dir}/{stat_model_name}', map_location=device))
+
 optimizer = Adam(model.parameters(), lr=learning_rate)
 stopper = EarlyStopper(patience=patience, min_delta=0)
 train(
@@ -191,5 +195,5 @@ abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, co
 plot_dir = os.path.join(experiment_dir, "docs", "figures")
 docs_path = os.path.join(experiment_dir, "docs", "figures", experiment_name)
 
-plot_good_and_bad_samples(val_loader, model, device, 5, experiment_name, plot_dir)
+# plot_good_and_bad_samples(val_loader, model, device, 5, experiment_name, plot_dir)
 test_model(model, normal_loader, abnormal_loader, docs_path, device)
