@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from utils import no_reduction_loss_function
+import time
+from tqdm import tqdm
 
 def score_sample(model, sample, device):
     model.eval()  # Set the model to evaluation mode
@@ -22,7 +24,8 @@ def evaluate_model(model, loader, device):
     model.eval()  # Set the model to evaluation mode
     zs, klds, rc_losses = [], [], []
     with torch.no_grad():  # Disable gradient calculation for efficiency
-        for x in loader:
+        progress_bar = tqdm(loader, total=len(loader), desc=f"Evaluating model")
+        for x in progress_bar:
             x = x.to(device)
             x_hat, mean, log_var, z = model(x)
             rc_loss, kld = no_reduction_loss_function(x, x_hat, mean, log_var)
@@ -33,10 +36,10 @@ def evaluate_model(model, loader, device):
     return np.concatenate(zs), np.concatenate(klds), np.concatenate(rc_losses)
 
 # Plotting Functions
-def plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss, kld_scale_factor=1000):
+def plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss):
     # Calculate the means
-    mean_normal_kld = np.mean(normal_kld) * kld_scale_factor
-    mean_abnormal_kld = np.mean(abnormal_kld) * kld_scale_factor
+    mean_normal_kld = np.mean(normal_kld)
+    mean_abnormal_kld = np.mean(abnormal_kld)
     mean_normal_rc_loss = np.mean(normal_rc_loss)
     mean_abnormal_rc_loss = np.mean(abnormal_rc_loss)
 
@@ -52,10 +55,10 @@ def plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss,
     fig, ax = plt.subplots(figsize=(14, 6), dpi=300)
     ax.bar(categories, values, color=['blue', 'red', 'green', 'blue', 'red', 'green'])
     for i, v in enumerate(values):
-        ax.text(i, v + 0.01, f"{v:.2f}", ha='center')
+        ax.text(i, v + 0.01, f"{v:.3f}", ha='center')
     ax.set_xticks(range(len(categories)))  # Set fixed number of ticks
     # ax.set_xticklabels(categories, rotation=45)  # Rotate the category labels to prevent overlap
-    ax.set_title('Comparison of Mean KLD and Reconstruction Loss (KLD Scaled)')
+    ax.set_title(f'Mean KLD Diff: {diff_kld}, Mean RC Loss Diff: {diff_rc_loss}')
     ax.set_ylabel('Values')
 
     # Capture the figure as an RGBA image and convert to a NumPy array
@@ -175,11 +178,12 @@ def plot_pca(normal_z, abnormal_z):
 
     return image_rgb
 
-def plot_tsne(normal_z, abnormal_z):
-    # Concatenate the normal and abnormal z values and perform t-SNE
+def plot_tsne(normal_z, abnormal_z):  
+    # First, perform PCA to reduce the dimensionality of the data to 50 dimensions
     all_z_values = np.vstack((normal_z, abnormal_z))  # Stack the z values vertically
-    tsne = TSNE(n_components=2, random_state=42)  # Initialize t-SNE to reduce to 2 components
-    # TODO set perplexity to 5 # take every 10th pixel
+    pca = PCA(n_components=50)  # Initialize PCA to reduce to 50 components
+    principal_components = pca.fit_transform(all_z_values)  # Fit and transform the data
+    tsne = TSNE(n_components=2, random_state=42, perplexity=5)
     tsne_components = tsne.fit_transform(all_z_values)  # Fit and transform the data
 
     # Split the transformed data back into normal and abnormal parts
@@ -233,48 +237,59 @@ def plot_tsne(normal_z, abnormal_z):
     return image_rgb
 
 # Main function
-def test_model(model, normal_loader, abnormal_loader, docs_path, device):
+def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_name):
+
     # if docs path does not exist, create it
     if not os.path.exists(docs_path):
         os.makedirs(docs_path)
 
+    print(f'{time.strftime("%Y%m%d-%H%M%S")} Evaluating {model_name}...')
     normal_z, normal_kld, normal_rc_loss = evaluate_model(model, normal_loader, device)
     abnormal_z, abnormal_kld, abnormal_rc_loss = evaluate_model(model, abnormal_loader, device)
     
-    # calculate the total mean difference in kld and rc_loss
-    mean_normal_kld = np.mean(normal_kld)
-    mean_abnormal_kld = np.mean(abnormal_kld)
-    mean_normal_rc_loss = np.mean(normal_rc_loss)
-    mean_abnormal_rc_loss = np.mean(abnormal_rc_loss)
-    diff_kld = mean_abnormal_kld - mean_normal_kld
-    diff_rc_loss = mean_abnormal_rc_loss - mean_normal_rc_loss
-
     # Generate and save plots
     mean_fig = plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss)
+    print(f'{time.strftime("%Y%m%d-%H%M%S")} Plotting loss scatter...')
     rc_kld_scatter = plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld)
+    print(f'{time.strftime("%Y%m%d-%H%M%S")} Plotting PCA...')
     pcs_fig = plot_pca(normal_z, abnormal_z)
-    # tsne_fig = plot_tsne(normal_z, abnormal_z)
+    print(f'{time.strftime("%Y%m%d-%H%M%S")} Plotting t-SNE...')
+    tsne_fig = plot_tsne(normal_z, abnormal_z)
 
     # Create a 1x4 grid of subplots
-    fig, axs = plt.subplots(3, 1, figsize=(8, 12), dpi=300)
+    print(f'{time.strftime("%Y%m%d-%H%M%S")} Creating Combined figure...')
+    fig, axs = plt.subplots(3, 1, figsize=(8, 16), dpi=300)
 
     # Insert each plot into the grid
     axs[0].imshow(mean_fig)
     axs[1].imshow(rc_kld_scatter)
     axs[2].imshow(pcs_fig)
-    # axs[3].imshow(tsne_fig)
+    axs[3].imshow(tsne_fig)
 
     # Set titles for subplots
-    axs[0].set_title(f'Total Mean Diff KLD: {diff_kld:.6f}, Diff. RC Loss: {diff_rc_loss:.6f}')
+    axs[0].set_title('Mean KLD and RC Loss')
     axs[1].set_title('RC Loss vs KLD Scatter')
     axs[2].set_title('PCA of Z Values')
-    # axs[3].set_title('t-SNE of Z Values')
+    axs[3].set_title('t-SNE of 50 PCA Components of Z Values')
 
     # Remove axes for each subplot
     for ax in axs:
         ax.axis('off')
 
+    # set overall title
+    nr_normal = len(normal_z)
+    nr_abnormal = len(abnormal_z)
+    model_name = model_name.replace(".pth", "")
+    fig.suptitle(f"Normal Samples: {nr_normal}, Abnormal Samples: {nr_abnormal}, Model: {model_name}")
+
+    plot_path = f"{docs_path}/{model_name}_eval_plot.png"
+    # if this plot already exists, change the name by adding a number
+    i = 1
+    while os.path.exists(plot_path):
+        plot_path = f"{docs_path}/{model_name}_eval_plot_{i}.png"
+        i += 1
+
     plt.tight_layout()
-    plt.savefig(f"{docs_path}/eval_plot.png")  # Save the combined plot
+    plt.savefig(f"{docs_path}/{model_name}_eval_plot.png")  # Save the combined plot
     plt.close(fig)  # Close the figure to free up memory    
 
