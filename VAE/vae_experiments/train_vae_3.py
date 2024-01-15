@@ -1,14 +1,14 @@
 import torch
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-from vae import VAE_2
+from vae import VAE_3
 from dataset import BioData
 from utils import plot_losses, visualize_comparison, loss_function, no_reduction_loss_function
 from tqdm import tqdm
 from earlystopper import EarlyStopper
 import os
 from test import test_model
-device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
 
 print("Using:", device)
 
@@ -144,13 +144,13 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
         visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss)
 
 
-experiment_name = "corr_vae_2_cont_2"
+experiment_name = "corr_vae_3"
 experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
 data_splits_json = os.path.join(experiment_dir, "data_splits.json")
 train_dataset = BioData(data_splits_json, "normal_corr_train")
 val_dataset = BioData(data_splits_json, "normal_corr_val")
-batch_size = 4
-learning_rate = 1e-4
+batch_size = 3
+learning_rate = 1e-3
 patience = 1000
 nr_epochs = 4000
 
@@ -158,16 +158,16 @@ train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=
 val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
 # train the VAE
-model_name = "corr_vae_2_cont_1_best.pth"
-model_path = os.path.join(experiment_dir, "models", model_name)
+# model_name = "corr_vae_2_cont_1_best.pth"
+# model_path = os.path.join(experiment_dir, "models", model_name)
 # checkpoint = torch.load(model_path)
 
-model = VAE_2(device=device).to(device)
+model = VAE_3(device=device).to(device)
 optimizer = Adam(model.parameters(), lr=learning_rate)
 # model.load_state_dict(checkpoint['model_state_dict'], map_location=device)
 # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
-model.load_state_dict(torch.load(model_path, map_location=device))
+# model.load_state_dict(torch.load(model_path, map_location=device))
 
 
 stopper = EarlyStopper(patience=patience, min_delta=0)
@@ -191,13 +191,13 @@ normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collat
 abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
 
 # Paths
-model_name = "corr_vae_2_cont_2_best.pth"
+model_name = "corr_vae_3_best.pth"
 plot_dir = os.path.join(experiment_dir, "docs", "figures")
 docs_path = os.path.join(experiment_dir, "docs", "figures", "eval_plots")
 model_path = os.path.join(experiment_dir, "models", model_name)
 
 # Initialize model and optimizer
-model = VAE_2(device=device) 
+model = VAE_3(device=device) 
 checkpoint = torch.load(model_path)
 model.load_state_dict(checkpoint['model_state_dict'], map_location=device)
 

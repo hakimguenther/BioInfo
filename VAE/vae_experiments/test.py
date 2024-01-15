@@ -36,10 +36,10 @@ def evaluate_model(model, loader, device):
     return np.concatenate(zs), np.concatenate(klds), np.concatenate(rc_losses)
 
 # Plotting Functions
-def plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss):
+def plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss, kld_scale_factor=100):
     # Calculate the means
-    mean_normal_kld = np.mean(normal_kld)
-    mean_abnormal_kld = np.mean(abnormal_kld)
+    mean_normal_kld = np.mean(normal_kld) * kld_scale_factor
+    mean_abnormal_kld = np.mean(abnormal_kld) * kld_scale_factor
     mean_normal_rc_loss = np.mean(normal_rc_loss)
     mean_abnormal_rc_loss = np.mean(abnormal_rc_loss)
 
@@ -48,7 +48,7 @@ def plot_kld_rc_loss(normal_kld, abnormal_kld, normal_rc_loss, abnormal_rc_loss)
     diff_rc_loss = mean_abnormal_rc_loss - mean_normal_rc_loss
 
     # Data for plotting
-    categories = ['Mean KLD Normal', 'Mean KLD Abnormal', 'Diff KLD', 'Mean RC Loss Normal', 'Mean RC Loss Abnormal', 'Diff RC Loss']
+    categories = ['Mean KLD Normal (scaled)', 'Mean KLD Abnormal (scaled)', 'Diff KLD (scaled)', 'Mean RC Loss Normal', 'Mean RC Loss Abnormal', 'Diff RC Loss']
     values = [mean_normal_kld, mean_abnormal_kld, diff_kld, mean_normal_rc_loss, mean_abnormal_rc_loss, diff_rc_loss]
 
     # Creating the bar chart
@@ -179,12 +179,12 @@ def plot_pca(normal_z, abnormal_z):
     return image_rgb
 
 def plot_tsne(normal_z, abnormal_z):  
-    # First, perform PCA to reduce the dimensionality of the data to 50 dimensions
-    all_z_values = np.vstack((normal_z, abnormal_z))  # Stack the z values vertically
-    pca = PCA(n_components=50)  # Initialize PCA to reduce to 50 components
-    principal_components = pca.fit_transform(all_z_values)  # Fit and transform the data
+    # Ensure all_z_values is correctly formed
+    all_z_values = np.vstack((normal_z, abnormal_z))
+
+    # Initialize and apply t-SNE
     tsne = TSNE(n_components=2, random_state=42, perplexity=5)
-    tsne_components = tsne.fit_transform(all_z_values)  # Fit and transform the data
+    tsne_components = tsne.fit_transform(all_z_values)
 
     # Split the transformed data back into normal and abnormal parts
     normal_tsne_components = tsne_components[:len(normal_z)]
@@ -253,24 +253,24 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
     rc_kld_scatter = plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld)
     print(f'{time.strftime("%Y%m%d-%H%M%S")} Plotting PCA...')
     pcs_fig = plot_pca(normal_z, abnormal_z)
-    print(f'{time.strftime("%Y%m%d-%H%M%S")} Plotting t-SNE...')
-    tsne_fig = plot_tsne(normal_z, abnormal_z)
+    # print(f'{time.strftime("%Y%m%d-%H%M%S")} Plotting t-SNE...')
+    # tsne_fig = plot_tsne(normal_z, abnormal_z)
 
     # Create a 1x4 grid of subplots
     print(f'{time.strftime("%Y%m%d-%H%M%S")} Creating Combined figure...')
-    fig, axs = plt.subplots(3, 1, figsize=(8, 16), dpi=300)
+    fig, axs = plt.subplots(3, 1, figsize=(8, 12), dpi=300)
 
     # Insert each plot into the grid
     axs[0].imshow(mean_fig)
     axs[1].imshow(rc_kld_scatter)
     axs[2].imshow(pcs_fig)
-    axs[3].imshow(tsne_fig)
+    # axs[3].imshow(tsne_fig)
 
     # Set titles for subplots
     axs[0].set_title('Mean KLD and RC Loss')
     axs[1].set_title('RC Loss vs KLD Scatter')
     axs[2].set_title('PCA of Z Values')
-    axs[3].set_title('t-SNE of 50 PCA Components of Z Values')
+    # axs[3].set_title('t-SNE of 50 PCA Components of Z Values')
 
     # Remove axes for each subplot
     for ax in axs:
