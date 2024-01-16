@@ -59,6 +59,9 @@ def plot_losses(training_losses, validation_losses, experiment_name, docs_dir):
     # Annotate the last number for validation
     plt.text(epochs[-1], validation_reproduction_losses[-1], f'{validation_reproduction_losses[-1]:.2f}')
 
+    # set overall title
+    plt.suptitle(f'{experiment_name} - VAl KLD Loss: {validation_kdl_losses[-1]:.4f}, VAL MAE (RC) Loss: {validation_reproduction_losses[-1]:.4f}')
+
     # Saving the plot
     if not os.path.exists(docs_dir):
         os.makedirs(docs_dir)

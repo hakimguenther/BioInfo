@@ -27,7 +27,8 @@ class EarlyStopper:
         model_dir = docs_dir.replace('docs', 'models')
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
+        model_path = os.path.join(model_dir, experiment_name + ".pth")
         torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
-        }, 'model_and_optimizer.pth')
+        }, model_path)
