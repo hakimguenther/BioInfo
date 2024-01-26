@@ -1,14 +1,13 @@
 import torch
 from torch.optim import Adam
 from torch.utils.data import DataLoader
-from vae import VAE_2_1
-from dataset import BioData
-from utils import plot_losses, visualize_comparison, loss_function, no_reduction_loss_function
+from src.vae import VAE_2_1
+from src.dataset import BioData
+from src.loss import plot_losses, loss_function
 from tqdm import tqdm
-from earlystopper import EarlyStopper
+from src.earlystopper import EarlyStopper
 import os
-from test import test_model
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 
 print("Using:", device)
 
@@ -81,7 +80,7 @@ def validate_checkpoint(model, device, val_loader, epoch):
         # print("Epoch", epoch + 1, "Average Val KDL Loss: ", losses["average_val_kdl_loss"], "Average Val Reproduction Loss: ", losses["average_val_reproduction_loss"])
     return losses
 
-def train(model, optimizer, epochs, device, train_loader, val_loader, early_stopper, experiment_name="", docs_dir="docs"):
+def train(model, optimizer, epochs, device, train_loader, val_loader, early_stopper, experiment_name="", docs_dir="docs", model_dir="models"):
     training_losses = []
     validation_losses = []
     progress_bar = tqdm(range(epochs), total=epochs, desc=f"Epoch 0/{epochs}")
@@ -101,13 +100,13 @@ def train(model, optimizer, epochs, device, train_loader, val_loader, early_stop
         stop_decision = early_stopper.early_stop(
             val_losses["average_val_reproduction_loss"] + val_losses["average_val_kdl_loss"], 
             model,
-            docs_dir,
+            model_dir,
             experiment_name,
             optimizer
             )
         
         # save last model
-        early_stopper.save_model(model, docs_dir, experiment_name + "_last", optimizer)
+        early_stopper.save_model(model, model_dir, experiment_name + "_last", optimizer)
         
         if stop_decision:
             print("early stop")
@@ -115,41 +114,16 @@ def train(model, optimizer, epochs, device, train_loader, val_loader, early_stop
 
         progress_bar.set_description(f"Epoch {epoch + 1}/{epochs}")
 
-def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualize, experiment_name, plot_dir):
-    model.eval()
-    sample_losses = []
+# experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
+# data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
 
-    with torch.no_grad():
-        for batch in val_loader:
-            x = batch.to(device)
-            x_hat, mean, log_var, z = model(x)
-            reconstruction_loss, kld_loss = no_reduction_loss_function(x, x_hat, mean, log_var)
-            combined_loss = reconstruction_loss + kld_loss
-
-            # Store combined loss and corresponding indices
-            for i, (comb_l, kld_l, rec_l) in enumerate(zip(combined_loss, kld_loss, reconstruction_loss)):
-                sample_losses.append((comb_l.item(), kld_l.item(), rec_l.item(), i, x[i], x_hat[i]))
-
-    # Sort by combined loss
-    sorted_samples = sorted(sample_losses, key=lambda x: x[0])
-
-    # Select top and bottom samples based on combined loss
-    selected_samples = sorted_samples[:num_samples_to_visualize] + sorted_samples[-num_samples_to_visualize:]
-
-    for comb_loss, kld_loss, rec_loss, _, x, x_hat in selected_samples:
-        # Flatten the tensors to 1D for visualization
-        x_flat = x.view(-1)
-        x_hat_flat = x_hat.view(-1)
-
-        visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss)
-
-
-experiment_name = "corr_vae_2_1"
-experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
-data_splits_json = os.path.join(experiment_dir, "data_splits.json")
+experiment_name = "vae_2_1"
+model_name = "vae_2_1_best.pth"
+experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
+data_splits_json = os.path.join(experiment_dir, "data", "data_splits.json")
 train_dataset = BioData(data_splits_json, "normal_corr_train")
 val_dataset = BioData(data_splits_json, "normal_corr_val")
-batch_size = 2
+batch_size = 3
 learning_rate = 1e-4
 patience = 1000
 nr_epochs = 4000
@@ -158,17 +132,13 @@ train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=
 val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
 # train the VAE
-# model_name = "corr_vae_2_cont_1_best.pth"
-# model_path = os.path.join(experiment_dir, "models", model_name)
-# checkpoint = torch.load(model_path)
+model_path = os.path.join(experiment_dir, "models", model_name)
+checkpoint = torch.load(model_path, map_location=device)
 
 model = VAE_2_1(device=device).to(device)
+model.load_state_dict(checkpoint['model_state_dict'])
 optimizer = Adam(model.parameters(), lr=learning_rate)
-# model.load_state_dict(checkpoint['model_state_dict'], map_location=device)
-# optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-
-# model.load_state_dict(torch.load(model_path, map_location=device))
-
+optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
 stopper = EarlyStopper(patience=patience, min_delta=0)
 train(
@@ -180,29 +150,6 @@ train(
     val_loader=val_loader,
     early_stopper=stopper,
     experiment_name=experiment_name,
-    docs_dir=os.path.join(experiment_dir, "docs")
+    docs_dir=os.path.join(experiment_dir, "docs", "loss_plots"),
+    model_dir=os.path.join(experiment_dir, "models")
 )
-
-
-# Test Sets
-normal_dataset = BioData(data_splits_json, "normal_corr_test")
-abnormal_dataset = BioData(data_splits_json, "abnormal_corr")
-normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
-abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
-
-# Paths
-model_name = "corr_vae_2_1_best.pth"
-plot_dir = os.path.join(experiment_dir, "docs", "figures")
-docs_path = os.path.join(experiment_dir, "docs", "figures", "eval_plots")
-model_path = os.path.join(experiment_dir, "models", model_name)
-
-# Initialize model and optimizer
-model = VAE_2_1(device=device) 
-checkpoint = torch.load(model_path, map_location=device)
-model.load_state_dict(checkpoint['model_state_dict'])
-
-# Move model to the desired device before resuming training
-model.to(device)
-
-# plot_good_and_bad_samples(val_loader, model, device, 5, experiment_name, plot_dir)
-test_model(model, normal_loader, abnormal_loader, docs_path, device, model_name)
