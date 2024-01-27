@@ -4,7 +4,7 @@ from src.vae import VAE_1, VAE_2, VAE_2_1
 from src.dataset import BioData
 import os
 from src.test import test_model, plot_good_and_bad_samples
-device = torch.device("cuda:3" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 def custom_collate(batch):
     batch = [item for item in batch if item.numel() > 0]  # Filter out empty tensors
@@ -12,12 +12,12 @@ def custom_collate(batch):
         return torch.empty(0, 442)  # Return an empty tensor with the right shape if batch is empty
     return torch.cat(batch, dim=0)
 
-experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
-data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
+# experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
+# data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
 
 
-# experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
-# data_splits_json = os.path.join(experiment_dir, "data_splits.json")
+experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
+data_splits_json = os.path.join(experiment_dir,"data", "data_splits.json")
 batch_size = 1
 
 # Test Sets
