@@ -12,7 +12,7 @@ def loss_function(x, x_hat, mean, log_var):
     return reproduction_loss, KLD
 
 def no_reduction_loss_function(x, x_hat, mean, log_var):
-    reproduction_loss = F.l1_loss(x_hat, x, reduction='none').sum(dim=1)
+    reproduction_loss = F.l1_loss(x_hat, x, reduction='none').mean(dim=1)
     KLD = -0.5 * torch.sum(1 + log_var - mean.pow(2) - log_var.exp(), dim=1)
     return reproduction_loss, KLD
 

@@ -18,7 +18,7 @@ data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/Bi
 
 # experiment_dir = "/prodi/bioinfdata/user/bioinf3/vae_experiments"
 # data_splits_json = os.path.join(experiment_dir, "data_splits.json")
-batch_size = 4
+batch_size = 1
 
 # Test Sets
 normal_dataset = BioData(data_splits_json, "normal_corr_test")
@@ -31,7 +31,7 @@ plot_dir = os.path.join(experiment_dir, "docs", "figures")
 eval_plots_path = os.path.join(experiment_dir, "docs", "eval_plots")
 
 # Test VAE 1
-model_name = "vae_1_7k_best.pth"
+model_name = "vae_1_best.pth"
 model_path = os.path.join(experiment_dir, "models", model_name)
 model = VAE_1(device=device) 
 checkpoint = torch.load(model_path, map_location=device)
