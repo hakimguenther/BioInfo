@@ -219,3 +219,69 @@ class VAE_2_1(nn.Module):
         x_hat = self.decode(z)
         return x_hat, mean, logvar, z
     
+
+
+class VAE_Enhanced(nn.Module):
+    def __init__(self, device, latent_size=10):
+        super(VAE_Enhanced, self).__init__()
+
+        self.device = device
+
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(442, 300),
+            nn.BatchNorm1d(300),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+            nn.Linear(300, 150),
+            nn.BatchNorm1d(150),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.3),
+            nn.Linear(150, 75),
+            nn.LeakyReLU(0.2)
+            )
+
+        # Residual block
+        self.residual_block = nn.Sequential(
+            nn.Linear(75, 75),
+            nn.LeakyReLU(0.2),
+            nn.Linear(75, 75)
+        )
+
+        # Latent mean and variance
+        self.mean_layer = nn.Linear(75, latent_size)
+        self.logvar_layer = nn.Linear(75, latent_size)
+
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_size, 75),
+            nn.LeakyReLU(0.2),
+            nn.Linear(75, 150),
+            nn.LeakyReLU(0.2),
+            nn.LayerNorm(150),
+            nn.Linear(150, 300),
+            nn.LeakyReLU(0.2),
+            nn.LayerNorm(300),
+            nn.Linear(300, 442),
+            nn.Sigmoid()
+            )
+
+    def encode(self, x):
+        x = self.encoder(x)
+        x = x + self.residual_block(x)  # Residual connection
+        mean, logvar = self.mean_layer(x), self.logvar_layer(x)
+        return mean, logvar
+
+    def reparameterization(self, mean, var):
+        epsilon = torch.randn_like(var).to(self.device)
+        z = mean + var * epsilon
+        return z
+
+    def decode(self, x):
+        return self.decoder(x)
+
+    def forward(self, x):
+        mean, logvar = self.encode(x)
+        z = self.reparameterization(mean, logvar)
+        x_hat = self.decode(z)
+        return x_hat, mean, logvar, z

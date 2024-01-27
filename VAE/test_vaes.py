@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from src.vae import VAE_1, VAE_2
+from src.vae import VAE_1, VAE_2, VAE_2_1
 from src.dataset import BioData
 import os
 from src.test import test_model, plot_good_and_bad_samples
@@ -38,5 +38,28 @@ checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.to(device)
 
-# plot_good_and_bad_samples(normal_loader, model, device, 5, model_name, plot_dir)
+plot_good_and_bad_samples(normal_loader, model, device, 5, model_name, plot_dir)
+test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
+
+
+# Test VAE 2
+model_name = "vae_2_best.pth"
+model_path = os.path.join(experiment_dir, "models", model_name)
+model = VAE_2(device=device) 
+checkpoint = torch.load(model_path, map_location=device)
+model.load_state_dict(checkpoint['model_state_dict'])
+model.to(device)
+
+plot_good_and_bad_samples(normal_loader, model, device, 5, model_name, plot_dir)
+test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
+
+# Test VAE 2.1
+model_name = "vae_2_1_best.pth"
+model_path = os.path.join(experiment_dir, "models", model_name)
+model = VAE_2_1(device=device) 
+checkpoint = torch.load(model_path, map_location=device)
+model.load_state_dict(checkpoint['model_state_dict'])
+model.to(device)
+
+plot_good_and_bad_samples(normal_loader, model, device, 5, model_name, plot_dir)
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
