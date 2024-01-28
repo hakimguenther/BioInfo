@@ -12,17 +12,17 @@ def custom_collate(batch):
         return torch.empty(0, 442)  # Return an empty tensor with the right shape if batch is empty
     return torch.cat(batch, dim=0)
 
-experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
-data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
+# experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
+# data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
 
 
-# experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
-# data_splits_json = os.path.join(experiment_dir,"data", "data_splits.json")
+experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
+data_splits_json = os.path.join(experiment_dir,"data", "data_splits.json")
 batch_size = 1
 
 # Test Sets
 normal_dataset = BioData(data_splits_json, "normal_corr_test")
-abnormal_dataset = BioData(data_splits_json, "abnormal_corr")
+abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=0, trim_size=200)
 normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
 abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
 
@@ -40,8 +40,19 @@ model.to(device)
 
 output_dir = model_name.replace(".pth", "")
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
+
+# Test Sets
+normal_dataset = BioData(data_splits_json, "normal_corr_test")
+abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=200, trim_size=-1)
+normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+
+# Paths
+plot_dir = os.path.join(experiment_dir, "docs", "figures")
+eval_plots_path = os.path.join(experiment_dir, "docs", "eval_plots")
+
+test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
 plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
-plot_good_and_bad_samples(abnormal_loader, model, device, 20, output_dir +"_abnormal", plot_dir)
 
 
 # Test VAE Enhanced
@@ -54,5 +65,16 @@ model.to(device)
 
 output_dir = model_name.replace(".pth", "")
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
+
+# Test Sets
+normal_dataset = BioData(data_splits_json, "normal_corr_test")
+abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=200, trim_size=-1)
+normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+
+# Paths
+plot_dir = os.path.join(experiment_dir, "docs", "figures")
+eval_plots_path = os.path.join(experiment_dir, "docs", "eval_plots")
+
+test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
 plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
-plot_good_and_bad_samples(abnormal_loader, model, device, 20, output_dir +"_abnormal", plot_dir)

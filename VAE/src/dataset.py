@@ -5,7 +5,7 @@ import json
 
 
 class BioData(Dataset):
-    def __init__(self, json_path, key, trim_size=None):
+    def __init__(self, json_path, key, start_idx=0, trim_size=None):
 
         # Load the json file
         with open(json_path, 'r') as fp:
@@ -13,7 +13,7 @@ class BioData(Dataset):
 
         self.samples = data_dict[key]
         if trim_size is not None:
-            self.samples = self.samples[:trim_size]
+            self.samples = self.samples[start_idx:trim_size]
         
     def __len__(self):
         return len(self.samples)
