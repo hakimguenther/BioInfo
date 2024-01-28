@@ -89,64 +89,62 @@ def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name,
 #### evaluating model ####
 
 def evaluate_model_normal(model, loader, device):
-    model.eval()  # Set the model to evaluation mode
-    results = []
+    model.eval()
 
-    with torch.no_grad():  # Disable gradient calculation for efficiency
+    zs_list, klds_list, rc_losses_list, file_paths_list = [], [], [], []
+
+    with torch.no_grad():
         progress_bar = tqdm(loader, total=len(loader), desc="Evaluating model")
-        for i, x in enumerate(progress_bar):
+        for i, x in enumerate(progress_bar):  # Assuming each batch has data x and index idx
             x = x.to(device)
             x_hat, mean, log_var, z = model(x)
             rc_loss, kld = no_reduction_loss_function(x, x_hat, mean, log_var)
-            
-            z = z.cpu().numpy()
-            rc_loss = rc_loss.cpu().numpy()
-            kld = kld.cpu().numpy()
 
-            # Retrieve the file path using the index
-            # Assuming loader.dataset is an instance of the BioData class or similar
+            zs_list.append(z.cpu().numpy())
+            klds_list.append(kld.cpu().numpy())
+            rc_losses_list.append(rc_loss.cpu().numpy())
             file_path = loader.dataset.samples[i]
+            file_paths_list.append([file_path] * x.size(0))
 
-            data_point = {
-                "file_path": file_path,
-                "rc_loss": rc_loss,
-                "kld": kld,
-                "z": z,
-            }
-            results.append(data_point)
 
-    return results
+    # Convert lists to numpy arrays
+    zs = np.vstack(zs_list)
+    klds = np.concatenate(klds_list)
+    rc_losses = np.concatenate(rc_losses_list)
+    file_paths_list = np.concatenate(file_paths_list)
+
+    return zs, klds, rc_losses, file_paths_list
 
 def evaluate_model_abnormal(model, loader, device):
-    model.eval()  # Set the model to evaluation mode
-    results = []
+    model.eval()
 
-    with torch.no_grad():  # Disable gradient calculation for efficiency
+    zs_list, klds_list, rc_losses_list, file_paths_list, x_list, x_hat_list = [], [], [], [], [], []
+
+    with torch.no_grad():
         progress_bar = tqdm(loader, total=len(loader), desc="Evaluating model")
-        for i, x in enumerate(progress_bar):
+        for i, x in enumerate(progress_bar):  # Assuming each batch has data x and index idx
             x = x.to(device)
             x_hat, mean, log_var, z = model(x)
             rc_loss, kld = no_reduction_loss_function(x, x_hat, mean, log_var)
-            
-            z = z.cpu().numpy()
-            rc_loss = rc_loss.cpu().numpy()
-            kld = kld.cpu().numpy()
 
-            # Retrieve the file path using the index
-            # Assuming loader.dataset is an instance of the BioData class or similar
+            zs_list.append(z.cpu().numpy())
+            klds_list.append(kld.cpu().numpy())
+            rc_losses_list.append(rc_loss.cpu().numpy())
             file_path = loader.dataset.samples[i]
+            file_paths_list.append([file_path] * x.size(0))
+            x_list.append(x.cpu().numpy())
+            x_hat_list.append(x_hat.cpu().numpy())
 
-            data_point = {
-                "file_path": file_path,
-                "rc_loss": rc_loss,
-                "kld": kld,
-                "z": z,
-                "x": x.cpu().numpy(),
-                "x_hat": x_hat.cpu().numpy()
-            }
-            results.append(data_point)
 
-    return results
+    # Convert lists to numpy arrays
+    zs = np.vstack(zs_list)
+    klds = np.concatenate(klds_list)
+    rc_losses = np.concatenate(rc_losses_list)
+    x = np.vstack(x_list)
+    x_hat = np.vstack(x_hat_list)
+    file_paths_list = np.concatenate(file_paths_list)
+
+    return zs, klds, rc_losses, file_paths_list, x, x_hat
 
 def extract_values_normal(data_points):
     if not data_points:
@@ -185,31 +183,50 @@ def extract_values_abnormal(data_points):
 
     return zs, klds, rc_losses, file_paths, x, x_hat
 
-
 #### plotting all spectra ####
-def sum_batch_data(data):
-    batch_aggregated = {
-        'rc_loss': [],
-        'kld': []
-    }
-    for entry in data:
-        batch_aggregated['rc_loss'].append(np.sum(entry['rc_loss']))
-        batch_aggregated['kld'].append(np.sum(entry['kld']))
+def sum_batch_data(klds, rc_losses, file_paths_list):
+    # Initialize lists for start and end indices
+    start_indices = [0]
+    end_indices = []
 
-    return batch_aggregated
+    # Identify the transition points for start and end indices
+    for i in range(1, len(file_paths_list)):
+        if file_paths_list[i] != file_paths_list[i - 1]:
+            end_indices.append(i - 1)
+            start_indices.append(i)
+    end_indices.append(len(file_paths_list) - 1)  # Add the end index for the last batch
 
-def mean_batch_data(data):
-    batch_aggregated = {
-        'rc_loss': [],
-        'kld': []
-    }
-    for entry in data:
-        batch_aggregated['rc_loss'].append(np.mean(entry['rc_loss']))
-        batch_aggregated['kld'].append(np.mean(entry['kld']))
+    # Sum up the klds and rc_losses for each spectrum using NumPy slicing
+    summed_klds = [np.sum(klds[start:end + 1]) for start, end in zip(start_indices, end_indices)]
+    summed_rc_losses = [np.sum(rc_losses[start:end + 1]) for start, end in zip(start_indices, end_indices)]
 
-    return batch_aggregated
+    # Reduce the file_paths_list to only contain one entry per spectrum
+    unique_file_paths = [file_paths_list[i] for i in start_indices]
 
-def plot_summed_rc_loss_kld(normal_data, abnormal_data):
+    return summed_klds, summed_rc_losses, unique_file_paths
+
+def mean_batch_data(klds, rc_losses, file_paths_list):
+    # Initialize lists for start and end indices
+    start_indices = [0]
+    end_indices = []
+
+    # Identify the transition points for start and end indices
+    for i in range(1, len(file_paths_list)):
+        if file_paths_list[i] != file_paths_list[i - 1]:
+            end_indices.append(i - 1)
+            start_indices.append(i)
+    end_indices.append(len(file_paths_list) - 1)  # Add the end index for the last batch
+
+    # Calculate mean of klds and rc_losses for each spectrum using NumPy slicing
+    mean_klds = [np.mean(klds[start:end + 1]) for start, end in zip(start_indices, end_indices)]
+    mean_rc_losses = [np.mean(rc_losses[start:end + 1]) for start, end in zip(start_indices, end_indices)]
+
+    # Reduce the file_paths_list to only contain one entry per spectrum
+    unique_file_paths = [file_paths_list[i] for i in start_indices]
+
+    return mean_klds, mean_rc_losses, unique_file_paths
+
+def plot_summed_rc_loss_kld(normal_sum_rc_loss, normal_sum_kld, abnormal_sum_rc_loss, abnormal_sum_kld, abnormal_file_paths):
     dot_size = 15
     alpha = 1.0
     x_label = 'Summed Reconstruction Loss (MAE)'
@@ -217,15 +234,6 @@ def plot_summed_rc_loss_kld(normal_data, abnormal_data):
     normal_data_label = 'Normal Spectra'
     abnormal_data_label = 'Abnormal Spectra'
     annotation_font_size = 15  # Set font size as small as the dots
-
-    # Aggregate the values by batch
-    normal_aggregated = sum_batch_data(normal_data)
-    abnormal_aggregated = sum_batch_data(abnormal_data)
-
-    normal_sum_rc_loss = normal_aggregated['rc_loss']
-    normal_sum_kld = normal_aggregated['kld']
-    abnormal_sum_rc_loss = abnormal_aggregated['rc_loss']
-    abnormal_sum_kld = abnormal_aggregated['kld']
 
     # Create plot
     fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True)
@@ -249,7 +257,7 @@ def plot_summed_rc_loss_kld(normal_data, abnormal_data):
     for i, (x, y) in enumerate(zip(abnormal_sum_rc_loss, abnormal_sum_kld)):
         if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
             # Annotate the point with its file name, directly at the point with small font size
-            axes[0].annotate(abnormal_data[i]['file_path'].split('/')[-1].replace(".npy", "").replace("data",""),
+            axes[0].annotate(abnormal_file_paths[i].split('/')[-1].replace(".npy", "").replace("data",""),
                              (x, y),
                              fontsize=annotation_font_size,  # Set the annotation font size
                              ha='center', va='center')
@@ -297,7 +305,7 @@ def plot_summed_rc_loss_kld(normal_data, abnormal_data):
 
     return image_rgb
 
-def plot_mean_rc_loss_kld(normal_data, abnormal_data):
+def plot_mean_rc_loss_kld(normal_mean_rc_loss, normal_mean_kld, abnormal_mean_rc_loss, abnormal_mean_kld, abnormal_file_paths):
     dot_size = 15
     alpha = 1.0
     x_label = 'Mean Reconstruction Loss (MAE)'
@@ -305,15 +313,6 @@ def plot_mean_rc_loss_kld(normal_data, abnormal_data):
     normal_data_label = 'Normal Spectra'
     abnormal_data_label = 'Abnormal Spectra'
     annotation_font_size = 15  # Set font size as small as the dots
-
-    # Aggregate the values by batch
-    normal_aggregated = mean_batch_data(normal_data)
-    abnormal_aggregated = mean_batch_data(abnormal_data)
-
-    normal_mean_rc_loss = normal_aggregated['rc_loss']
-    normal_mean_kld = normal_aggregated['kld']
-    abnormal_mean_rc_loss = abnormal_aggregated['rc_loss']
-    abnormal_mean_kld = abnormal_aggregated['kld']
 
     # Create plot
     fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=global_dpi)
@@ -338,7 +337,7 @@ def plot_mean_rc_loss_kld(normal_data, abnormal_data):
     for i, (x, y) in enumerate(zip(abnormal_mean_rc_loss, abnormal_mean_kld)):
         if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
             # Annotate the point with its file name, directly at the point with small font size
-            axes[0].annotate(abnormal_data[i]['file_path'].split('/')[-1].replace(".npy", "").replace("data",""),
+            axes[0].annotate(abnormal_file_paths[i].split('/')[-1].replace(".npy", "").replace("data",""),
                              (x, y),
                              fontsize=annotation_font_size,  # Set the annotation font size
                              ha='center', va='center')
@@ -569,38 +568,31 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
         os.makedirs(docs_path)
 
     print(f'{time.strftime("%H:%M:%S")} Evaluating {model_name}...')
-    normal_data = evaluate_model_normal(model, normal_loader, device)
-    abnormal_data = evaluate_model_abnormal(model, abnormal_loader, device)
+    normal_zs, normal_klds, normal_rc_losses, normal_file_paths_list = evaluate_model_normal(model, normal_loader, device)
+    abnormal_zs, abnormal_klds, abnormal_rc_losses, abnormal_file_paths_list, abnormal_x, abnormal_x_hat = evaluate_model_abnormal(model, abnormal_loader, device)
+
+    normal_sum_kld, normal_sum_rc_loss, normal_file_paths = sum_batch_data(normal_klds, normal_rc_losses, normal_file_paths_list)
+    abnormal_sum_kld, abnormal_sum_rc_loss, abnormal_file_paths = sum_batch_data(abnormal_klds, abnormal_rc_losses, abnormal_file_paths_list)
+    normal_mean_kld, normal_mean_rc_loss, normal_file_paths = mean_batch_data(normal_klds, normal_rc_losses, normal_file_paths_list)
+    abnormal_mean_kld, abnormal_mean_rc_loss, abnormal_file_paths = mean_batch_data(abnormal_klds, abnormal_rc_losses, abnormal_file_paths_list)
 
     # Extract the number of normal and abnormal spectra and pixels
-    nr_normal_spec = len(normal_data)
-    nr_abnormal_spec = len(abnormal_data)
+    nr_normal_spec = len(set(normal_file_paths_list))
+    nr_abnormal_spec = len(set(abnormal_file_paths_list))
+    nr_normal = len(normal_zs)
+    nr_abnormal = len(abnormal_zs)
 
     # plot good and bad samples
     print(f'{time.strftime("%H:%M:%S")} Plotting sum loss scatter spectras...')
-    rc_kld_scatter_spectra_sum = plot_summed_rc_loss_kld(normal_data, abnormal_data)
+    rc_kld_scatter_spectra_sum = plot_summed_rc_loss_kld(normal_sum_rc_loss, normal_sum_kld, abnormal_sum_rc_loss, abnormal_sum_kld, abnormal_file_paths)
     print(f'{time.strftime("%H:%M:%S")} Plotting mean loss scatter spectras...')
-    rc_kld_scatter_spectra_mean = plot_mean_rc_loss_kld(normal_data, abnormal_data)
-
-    # Extract the values and file paths
-    print(f'{time.strftime("%H:%M:%S")} Extracting normal values...')
-    normal_z, normal_kld, normal_rc_loss = extract_values_normal(normal_data)
-    # delete normal_data to free up memory
-    del normal_data
-    print(f'{time.strftime("%H:%M:%S")} Extracting abnormal values...')
-    abnormal_z, abnormal_kld, abnormal_rc_loss, abnormal_file_paths, abnormal_x, abnormal_x_hat = extract_values_abnormal(abnormal_data)
-    # delete abnormal_data to free up memory
-    del abnormal_data
-
-    # Extract the number of normal and abnormal pixels
-    nr_normal = len(normal_z)
-    nr_abnormal = len(abnormal_z)
+    rc_kld_scatter_spectra_mean = plot_mean_rc_loss_kld(normal_mean_rc_loss, normal_mean_kld, abnormal_mean_rc_loss, abnormal_mean_kld, abnormal_file_paths)
 
     # Generate and save plots
     print(f'{time.strftime("%H:%M:%S")} Plotting loss scatter pixel...')
-    rc_kld_scatter_pixel = plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld, abnormal_file_paths, abnormal_x, abnormal_x_hat, docs_path, model_name) 
+    rc_kld_scatter_pixel = plot_rc_loss_kld_scatter(normal_rc_losses, normal_klds, abnormal_rc_losses, abnormal_klds, abnormal_file_paths_list, abnormal_x, abnormal_x_hat, docs_path, model_name) 
     print(f'{time.strftime("%H:%M:%S")} Plotting PCA...')
-    pcs_fig = plot_pca(normal_z, abnormal_z, abnormal_file_paths)
+    pcs_fig = plot_pca(normal_zs, abnormal_zs, abnormal_file_paths_list)
 
     # Create a 1x4 grid of subplots
     print(f'{time.strftime("%H:%M:%S")} Creating Combined figure...')
