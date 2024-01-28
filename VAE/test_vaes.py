@@ -20,61 +20,49 @@ experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
 data_splits_json = os.path.join(experiment_dir,"data", "data_splits.json")
 batch_size = 1
 
-# Test Sets
-normal_dataset = BioData(data_splits_json, "normal_corr_test")
-abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=0, trim_size=200)
-normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
-abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
-
 # Paths
 plot_dir = os.path.join(experiment_dir, "docs", "figures")
 eval_plots_path = os.path.join(experiment_dir, "docs", "eval_plots")
+normal_dataset = BioData(data_splits_json, "normal_corr_test")
+normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
 
-# Test VAE 2.1
+##### Test VAE 2.1 ######
 model_name = "vae_2_1_best.pth"
+output_dir = model_name.replace(".pth", "")
 model_path = os.path.join(experiment_dir, "models", model_name)
 model = VAE_2_1(device=device) 
 checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.to(device)
 
-output_dir = model_name.replace(".pth", "")
+# Test 1
+abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=0, trim_size=200)
+abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
 
-# Test Sets
-normal_dataset = BioData(data_splits_json, "normal_corr_test")
-abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=200, trim_size=-1)
-normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+# Test 2
+abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=200, trim_size=402)
 abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
-
-# Paths
-plot_dir = os.path.join(experiment_dir, "docs", "figures")
-eval_plots_path = os.path.join(experiment_dir, "docs", "eval_plots")
-
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
 plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
 
 
-# Test VAE Enhanced
+##### Test VAE Enhanced ######
 model_name = "vae_enhanced_best.pth"
+output_dir = model_name.replace(".pth", "")
 model_path = os.path.join(experiment_dir, "models", model_name)
 model = VAE_Enhanced(device=device)
 checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.to(device)
 
-output_dir = model_name.replace(".pth", "")
+# Test 1
+abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=0, trim_size=200)
+abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
 
-# Test Sets
-normal_dataset = BioData(data_splits_json, "normal_corr_test")
-abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=200, trim_size=-1)
-normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+# Test 2
+abnormal_dataset = BioData(data_splits_json, "abnormal_corr", start_idx=200, trim_size=402)
 abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
-
-# Paths
-plot_dir = os.path.join(experiment_dir, "docs", "figures")
-eval_plots_path = os.path.join(experiment_dir, "docs", "eval_plots")
-
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
 plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
