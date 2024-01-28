@@ -12,12 +12,12 @@ def custom_collate(batch):
         return torch.empty(0, 442)  # Return an empty tensor with the right shape if batch is empty
     return torch.cat(batch, dim=0)
 
-# experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
-# data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
+experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
+data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
 
 
-experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
-data_splits_json = os.path.join(experiment_dir,"data", "data_splits.json")
+# experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
+# data_splits_json = os.path.join(experiment_dir,"data", "data_splits.json")
 batch_size = 1
 
 # Test Sets

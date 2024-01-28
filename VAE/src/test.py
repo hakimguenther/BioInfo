@@ -9,6 +9,8 @@ from tqdm import tqdm
 import io
 from PIL import Image
 from scipy.spatial import ConvexHull
+import joblib
+import gc
 
 global_dpi = 400
 
@@ -387,7 +389,7 @@ def plot_mean_rc_loss_kld(normal_mean_rc_loss, normal_mean_kld, abnormal_mean_rc
 
 #### plotting all pixels from all spectra ####
 
-def plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld, abnormal_file_paths, abnormal_x, abnormal_x_hat, docs_path, model_name):
+def plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld, abnormal_file_paths, docs_path, model_name, abnormal_x, abnormal_x_hat):
     dot_size = 5
     alpha = 0.5
     annotation_font_size = 8  # Set font size as small as the dots
@@ -571,28 +573,71 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
     normal_zs, normal_klds, normal_rc_losses, normal_file_paths_list = evaluate_model_normal(model, normal_loader, device)
     abnormal_zs, abnormal_klds, abnormal_rc_losses, abnormal_file_paths_list, abnormal_x, abnormal_x_hat = evaluate_model_abnormal(model, abnormal_loader, device)
 
-    normal_sum_kld, normal_sum_rc_loss, normal_file_paths = sum_batch_data(normal_klds, normal_rc_losses, normal_file_paths_list)
-    abnormal_sum_kld, abnormal_sum_rc_loss, abnormal_file_paths = sum_batch_data(abnormal_klds, abnormal_rc_losses, abnormal_file_paths_list)
-    normal_mean_kld, normal_mean_rc_loss, normal_file_paths = mean_batch_data(normal_klds, normal_rc_losses, normal_file_paths_list)
-    abnormal_mean_kld, abnormal_mean_rc_loss, abnormal_file_paths = mean_batch_data(abnormal_klds, abnormal_rc_losses, abnormal_file_paths_list)
-
-    # Extract the number of normal and abnormal spectra and pixels
-    nr_normal_spec = len(set(normal_file_paths_list))
-    nr_abnormal_spec = len(set(abnormal_file_paths_list))
+    # Extract the number of normal and abnormal pixels
     nr_normal = len(normal_zs)
     nr_abnormal = len(abnormal_zs)
 
-    # plot good and bad samples
+    # dump the abnormal x and x_hat to a joblib file
+    x_abnormal_path = f"{docs_path}/{model_name}_abnormal_x.npy"
+    x_hat_abnormal_path = f"{docs_path}/{model_name}_abnormal_x_hat.npy"
+    z_abnormal_path = f"{docs_path}/{model_name}_abnormal_z.npy"
+    z_normal_path = f"{docs_path}/{model_name}_normal_z.npy"
+    joblib.dump(normal_zs, z_normal_path)
+    joblib.dump(abnormal_zs, z_abnormal_path)
+    joblib.dump(abnormal_x, x_abnormal_path)
+    joblib.dump(abnormal_x_hat, x_hat_abnormal_path)
+
+    # delete the abnormal x and x_hat from memory
+    print(f'{time.strftime("%H:%M:%S")} Deleting abnormal x and x_hat from memory...')
+    del abnormal_x, abnormal_x_hat, normal_zs, abnormal_zs
+    gc.collect()
+
+    # Sum up the klds and rc_losses for each spectrum
+    print(f'{time.strftime("%H:%M:%S")} Summing up loss values...')
+    normal_sum_kld, normal_sum_rc_loss, normal_file_paths = sum_batch_data(normal_klds, normal_rc_losses, normal_file_paths_list)
+    abnormal_sum_kld, abnormal_sum_rc_loss, abnormal_file_paths = sum_batch_data(abnormal_klds, abnormal_rc_losses, abnormal_file_paths_list)
+    # Calculate mean of klds and rc_losses for each spectrum
+    print(f'{time.strftime("%H:%M:%S")} Calculating mean values...')
+    normal_mean_kld, normal_mean_rc_loss, normal_file_paths = mean_batch_data(normal_klds, normal_rc_losses, normal_file_paths_list)
+    abnormal_mean_kld, abnormal_mean_rc_loss, abnormal_file_paths = mean_batch_data(abnormal_klds, abnormal_rc_losses, abnormal_file_paths_list)
+    # Extract the number of normal and abnormal spectra 
+    nr_normal_spec = len(set(normal_file_paths_list))
+    nr_abnormal_spec = len(set(abnormal_file_paths_list))
+
+    # Generating scatter plot of summed RC Loss vs KLD per spectrum
     print(f'{time.strftime("%H:%M:%S")} Plotting sum loss scatter spectras...')
     rc_kld_scatter_spectra_sum = plot_summed_rc_loss_kld(normal_sum_rc_loss, normal_sum_kld, abnormal_sum_rc_loss, abnormal_sum_kld, abnormal_file_paths)
     print(f'{time.strftime("%H:%M:%S")} Plotting mean loss scatter spectras...')
     rc_kld_scatter_spectra_mean = plot_mean_rc_loss_kld(normal_mean_rc_loss, normal_mean_kld, abnormal_mean_rc_loss, abnormal_mean_kld, abnormal_file_paths)
 
-    # Generate and save plots
+    # delete the sum and mean values from memory
+    print(f'{time.strftime("%H:%M:%S")} Deleting sum and mean values from memory...')
+    del normal_sum_kld, normal_sum_rc_loss, normal_file_paths
+    del abnormal_sum_kld, abnormal_sum_rc_loss, abnormal_file_paths
+    del normal_mean_kld, normal_mean_rc_loss
+    del abnormal_mean_kld, abnormal_mean_rc_loss
+    gc.collect()
+
+    # Generating scatter plot of RC Loss vs KLD per pixel
     print(f'{time.strftime("%H:%M:%S")} Plotting loss scatter pixel...')
-    rc_kld_scatter_pixel = plot_rc_loss_kld_scatter(normal_rc_losses, normal_klds, abnormal_rc_losses, abnormal_klds, abnormal_file_paths_list, abnormal_x, abnormal_x_hat, docs_path, model_name) 
+    # load the abnormal x and x_hat
+    x_abnormal = joblib.load(x_abnormal_path)
+    x_hat_abnormal = joblib.load(x_hat_abnormal_path)
+    rc_kld_scatter_pixel = plot_rc_loss_kld_scatter(normal_rc_losses, normal_klds, abnormal_rc_losses, abnormal_klds, abnormal_file_paths_list, docs_path, model_name, x_abnormal, x_hat_abnormal)
+    # delete the abnormal x and x_hat from memory
+    print(f'{time.strftime("%H:%M:%S")} Deleting abnormal x and x_hat from memory...')
+    del x_abnormal, x_hat_abnormal
+    gc.collect()
+
     print(f'{time.strftime("%H:%M:%S")} Plotting PCA...')
-    pcs_fig = plot_pca(normal_zs, abnormal_zs, abnormal_file_paths_list)
+    # load the z values from the joblib files
+    normal_zs = joblib.load(z_normal_path)
+    abnormal_zs = joblib.load(z_abnormal_path)
+    pca_fig = plot_pca(normal_zs, abnormal_zs, abnormal_file_paths_list)
+    # delete the z values from memory
+    print(f'{time.strftime("%H:%M:%S")} Deleting z values from memory...')
+    del normal_zs, abnormal_zs
+    gc.collect()
 
     # Create a 1x4 grid of subplots
     print(f'{time.strftime("%H:%M:%S")} Creating Combined figure...')
@@ -602,7 +647,7 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
     axs[0].imshow(rc_kld_scatter_spectra_sum)
     axs[1].imshow(rc_kld_scatter_spectra_mean)
     axs[2].imshow(rc_kld_scatter_pixel)
-    axs[3].imshow(pcs_fig)
+    axs[3].imshow(pca_fig)
 
     # Set titles for subplots
     axs[0].set_title('Summed RC Loss vs Summed KLD per Spectrum')
@@ -628,4 +673,12 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
     plt.tight_layout()
     plt.savefig(plot_path)  # Save the combined plot
     plt.close(fig)  # Close the figure to free up memory    
+
+    # delete the joblib files
+    print(f'{time.strftime("%H:%M:%S")} Deleting joblib files...')
+    os.remove(z_normal_path)
+    os.remove(z_abnormal_path)
+    os.remove(x_abnormal_path)
+    os.remove(x_hat_abnormal_path)
+    gc.collect()
 
