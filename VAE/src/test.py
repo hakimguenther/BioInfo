@@ -14,19 +14,33 @@ global_dpi = 400
 
 ####### single spectrum plotting #######
 def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualize, experiment_name, plot_dir):
+    print(f'{time.strftime("%H:%M:%S")} Plotting good and bad samples for {experiment_name}...')
     model.eval()
     sample_losses = []
 
     with torch.no_grad():
-        for batch in val_loader:
+        progress_bar = tqdm(val_loader, total=len(val_loader), desc="Evaluating model")
+        for batch in progress_bar:
             x = batch.to(device)
             x_hat, mean, log_var, z = model(x)
             reconstruction_loss, kld_loss = no_reduction_loss_function(x, x_hat, mean, log_var)
             combined_loss = reconstruction_loss + kld_loss
 
+            # Move tensors to CPU to reduce GPU memory usage
+            x_hat = x_hat.cpu()
+            mean = mean.cpu()
+            log_var = log_var.cpu()
+            z = z.cpu()
+            combined_loss = combined_loss.cpu()
+            kld_loss = kld_loss.cpu()
+            reconstruction_loss = reconstruction_loss.cpu()
+
             # Store combined loss and corresponding indices
             for i, (comb_l, kld_l, rec_l) in enumerate(zip(combined_loss, kld_loss, reconstruction_loss)):
-                sample_losses.append((comb_l.item(), kld_l.item(), rec_l.item(), i, x[i], x_hat[i]))
+                sample_losses.append((comb_l.item(), kld_l.item(), rec_l.item(), i, x[i].cpu(), x_hat[i]))
+
+            # Clear unused GPU memory
+            torch.cuda.empty_cache()
 
     # Sort by combined loss
     sorted_samples = sorted(sample_losses, key=lambda x: x[0])
