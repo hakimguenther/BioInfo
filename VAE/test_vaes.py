@@ -39,9 +39,9 @@ model.load_state_dict(checkpoint['model_state_dict'])
 model.to(device)
 
 output_dir = model_name.replace(".pth", "")
-plot_good_and_bad_samples(abnormal_loader, model, device, 20, output_dir +"_abnormal", plot_dir)
-plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
+plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
+plot_good_and_bad_samples(abnormal_loader, model, device, 20, output_dir +"_abnormal", plot_dir)
 
 
 # Test VAE Enhanced
@@ -53,6 +53,6 @@ model.load_state_dict(checkpoint['model_state_dict'])
 model.to(device)
 
 output_dir = model_name.replace(".pth", "")
-plot_good_and_bad_samples(abnormal_loader, model, device, 20, output_dir +"_abnormal", plot_dir)
-plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
+plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
+plot_good_and_bad_samples(abnormal_loader, model, device, 20, output_dir +"_abnormal", plot_dir)

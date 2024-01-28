@@ -40,7 +40,7 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
                 sample_losses.append((comb_l.item(), kld_l.item(), rec_l.item(), i, x[i].cpu(), x_hat[i]))
 
             # Clear unused GPU memory
-            torch.cuda.empty_cache()
+            # torch.cuda.empty_cache()
 
     # Sort by combined loss
     sorted_samples = sorted(sample_losses, key=lambda x: x[0])
@@ -59,15 +59,18 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
 
         visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss, prefix)
 
-def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name, plot_dir, kdl_loss, reconstruction_loss, combined_loss, prefix):
+def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name, plot_dir, kdl_loss, reconstruction_loss, combined_loss, prefix, file_name=None):
     # Ensure both tensors are on the CPU and convert them to numpy for plotting
-    original_data = original_tensor.cpu().numpy()
-    reconstructed_data = reconstructed_tensor.cpu().numpy()
+    original_data = original_tensor
+    reconstructed_data = reconstructed_tensor
 
     # in plot_dir create a folder with the name of the experiment
     save_dir = os.path.join(plot_dir, experiment_name)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+
+    if file_name is None:
+        file_name = experiment_name
 
     # Plotting
     plt.figure(figsize=(10, 4), dpi=global_dpi)
@@ -75,7 +78,7 @@ def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name,
     plt.plot(reconstructed_data, label='Reconstructed Data', color='red')
     plt.xlabel('Channel')
     plt.ylabel('Value')
-    plt.title(f'{experiment_name} - Combined Loss: {combined_loss:.6f}, KLD Loss: {kdl_loss:.6f}, Reconstruction Loss: {reconstruction_loss:.6f}')
+    plt.title(f'{file_name} - Combined Loss: {combined_loss:.6f}, KLD Loss: {kdl_loss:.6f}, Reconstruction Loss: {reconstruction_loss:.6f}')
     plt.legend()
     plt.grid(True)
 
@@ -108,14 +111,30 @@ def evaluate_model(model, loader, device):
                 "file_path": file_path,
                 "rc_loss": rc_loss,
                 "kld": kld,
-                "z": z
+                "z": z,
+                "x": x.cpu().numpy(),
+                "x_hat": x_hat.cpu().numpy()
             }
             results.append(data_point)
 
     return results
 
-def extract_values(data_points):
-    zs, klds, rc_losses, file_paths = [], [], [], []
+def extract_values_normal(data_points):
+    zs, klds, rc_losses = [], [], []
+    for data_point in data_points:        
+        zs.append(data_point['z'])
+        klds.append(data_point['kld'])
+        rc_losses.append(data_point['rc_loss'])
+
+    # Stack arrays for zs, klds, and rc_losses as before
+    zs_stacked = np.vstack(zs)
+    klds_stacked = np.concatenate(klds)
+    rc_losses_stacked = np.concatenate(rc_losses)
+
+    return zs_stacked, klds_stacked, rc_losses_stacked
+
+def extract_values_abnormal(data_points):
+    zs, klds, rc_losses, file_paths, x, x_hat = [], [], [], [], [], []
     for data_point in data_points:
         # Number of data points associated with this file path
         num_points = data_point['z'].shape[0]
@@ -123,6 +142,8 @@ def extract_values(data_points):
         zs.append(data_point['z'])
         klds.append(data_point['kld'])
         rc_losses.append(data_point['rc_loss'])
+        x.append(data_point['x'])
+        x_hat.append(data_point['x_hat'])
         
         # Replicate the file path for each data point
         file_paths.extend([data_point['file_path']] * num_points)
@@ -131,8 +152,10 @@ def extract_values(data_points):
     zs_stacked = np.vstack(zs)
     klds_stacked = np.concatenate(klds)
     rc_losses_stacked = np.concatenate(rc_losses)
+    x_stacked = np.vstack(x)
+    x_hat_stacked = np.vstack(x_hat)
 
-    return zs_stacked, klds_stacked, rc_losses_stacked, file_paths
+    return zs_stacked, klds_stacked, rc_losses_stacked, file_paths, x_stacked, x_hat_stacked
 
 #### plotting all spectra ####
 def sum_batch_data(data):
@@ -336,7 +359,7 @@ def plot_mean_rc_loss_kld(normal_data, abnormal_data):
 
 #### plotting all pixels from all spectra ####
 
-def plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld, abnormal_file_paths):
+def plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld, abnormal_file_paths, abnormal_x, abnormal_x_hat, docs_path, model_name):
     dot_size = 5
     alpha = 0.5
     annotation_font_size = 8  # Set font size as small as the dots
@@ -367,10 +390,18 @@ def plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnor
     for i, (x, y) in enumerate(zip(abnormal_rc_loss, abnormal_kld)):
         if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
             # Annotate the point with its file name, directly at the point with small font size
-            axes[0].annotate(abnormal_file_paths[i].split('/')[-1].replace(".npy", "").replace("data",""),
+            file_name = abnormal_file_paths[i].split('/')[-1]
+            axes[0].annotate(file_name.replace(".npy", "").replace("data",""),
                              (x, y),
                              fontsize=annotation_font_size,  # Set the annotation font size
                              ha='center', va='center')
+            # call visualize_comparison for this point
+            experiment_name = model_name.replace(".pth", "")
+            experiment_name = experiment_name + "_outside"
+            docs_dir = docs_path.replace("eval_plots", "figures")
+            prefix = f"{i}_{file_name}_"
+
+            visualize_comparison(abnormal_x[i], abnormal_x_hat[i], experiment_name, docs_dir, y, x, x+y, prefix, file_name)
     
     axes[0].set_title('Combined Data')
     axes[0].set_xlabel(x_label)
@@ -512,17 +543,31 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
     normal_data = evaluate_model(model, normal_loader, device)
     abnormal_data = evaluate_model(model, abnormal_loader, device)
 
-    # Extract the values and file paths
-    normal_z, normal_kld, normal_rc_loss, normal_file_paths = extract_values(normal_data)
-    abnormal_z, abnormal_kld, abnormal_rc_loss, abnormal_file_paths = extract_values(abnormal_data)
+    # Extract the number of normal and abnormal spectra and pixels
+    nr_normal_spec = len(normal_data)
+    nr_abnormal_spec = len(abnormal_data)
 
-    # Generate and save plots
+    # plot good and bad samples
     print(f'{time.strftime("%H:%M:%S")} Plotting sum loss scatter spectras...')
     rc_kld_scatter_spectra_sum = plot_summed_rc_loss_kld(normal_data, abnormal_data)
     print(f'{time.strftime("%H:%M:%S")} Plotting mean loss scatter spectras...')
     rc_kld_scatter_spectra_mean = plot_mean_rc_loss_kld(normal_data, abnormal_data)
+
+    # Extract the values and file paths
+    normal_z, normal_kld, normal_rc_loss = extract_values_normal(normal_data)
+    # delete normal_data to free up memory
+    del normal_data
+    abnormal_z, abnormal_kld, abnormal_rc_loss, abnormal_file_paths, abnormal_x, abnormal_x_hat = extract_values_abnormal(abnormal_data)
+    # delete abnormal_data to free up memory
+    del abnormal_data
+
+    # Extract the number of normal and abnormal pixels
+    nr_normal = len(normal_z)
+    nr_abnormal = len(abnormal_z)
+
+    # Generate and save plots
     print(f'{time.strftime("%H:%M:%S")} Plotting loss scatter pixel...')
-    rc_kld_scatter_pixel = plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld, abnormal_file_paths)
+    rc_kld_scatter_pixel = plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnormal_kld, abnormal_file_paths, abnormal_x, abnormal_x_hat, docs_path, model_name) 
     print(f'{time.strftime("%H:%M:%S")} Plotting PCA...')
     pcs_fig = plot_pca(normal_z, abnormal_z, abnormal_file_paths)
 
@@ -547,10 +592,6 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
         ax.axis('off')
 
     # set overall title
-    nr_normal = len(normal_z)
-    nr_abnormal = len(abnormal_z)
-    nr_normal_spec = len(normal_data)
-    nr_abnormal_spec = len(abnormal_data)
     model_name = model_name.replace(".pth", "")
     fig.suptitle(f"Normal Pixels: {nr_normal}, Abnormal Pixels: {nr_abnormal}, Normal Spectra: {nr_normal_spec}, Abnormal Spectra: {nr_abnormal_spec}, Model: {model_name}")
 
