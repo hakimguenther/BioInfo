@@ -9,7 +9,7 @@ from tqdm import tqdm
 import io
 from PIL import Image
 
-globale_dpi = 350
+global_dpi = 350
 
 ####### single spectrum plotting #######
 def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualize, experiment_name, plot_dir):
@@ -30,23 +30,19 @@ def plot_good_and_bad_samples(val_loader, model, device, num_samples_to_visualiz
     # Sort by combined loss
     sorted_samples = sorted(sample_losses, key=lambda x: x[0])
 
-    # Select top and bottom samples based on combined loss
-    best_samples = sorted_samples[:num_samples_to_visualize]
-    middle_samples = sorted_samples[len(sorted_samples) // 2 - num_samples_to_visualize // 2:len(sorted_samples) // 2 + num_samples_to_visualize // 2]
-    worst_samples = sorted_samples[-num_samples_to_visualize:]
-    selected_samples = [best_samples, middle_samples, worst_samples]
+    # Evenly select samples from the sorted list
+    step_size = max(len(sorted_samples) // num_samples_to_visualize, 1)
+    selected_samples = sorted_samples[::step_size][:num_samples_to_visualize]
 
-    for samples in selected_samples:
-        category = "best" if samples == best_samples else "middle" if samples == middle_samples else "worst"
-        i = 0
-        for comb_loss, kld_loss, rec_loss, _, x, x_hat in samples:
-            i += 1
-            prefix = category + "_" + str(i) + "_"
-            # Flatten the tensors to 1D for visualization
-            x_flat = x.view(-1)
-            x_hat_flat = x_hat.view(-1)
+    i = 0
+    for comb_loss, kld_loss, rec_loss, _, x, x_hat in selected_samples:
+        i += 1
+        prefix = str(i) + "_"
+        # Flatten the tensors to 1D for visualization
+        x_flat = x.view(-1)
+        x_hat_flat = x_hat.view(-1)
 
-            visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss, prefix)
+        visualize_comparison(x_flat, x_hat_flat, experiment_name, plot_dir, kld_loss, rec_loss, comb_loss, prefix)
 
 def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name, plot_dir, kdl_loss, reconstruction_loss, combined_loss, prefix):
     # Ensure both tensors are on the CPU and convert them to numpy for plotting
@@ -54,14 +50,12 @@ def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name,
     reconstructed_data = reconstructed_tensor.cpu().numpy()
 
     # in plot_dir create a folder with the name of the experiment
-    # remove .pth from experiment_name
-    experiment_name = experiment_name.replace(".pth", "")
     save_dir = os.path.join(plot_dir, experiment_name)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
     # Plotting
-    plt.figure(figsize=(10, 4), dpi=globale_dpi)
+    plt.figure(figsize=(10, 4), dpi=global_dpi)
     plt.plot(original_data, label='Original Data', color='blue')
     plt.plot(reconstructed_data, label='Reconstructed Data', color='red')
     plt.xlabel('Channel')
@@ -158,7 +152,7 @@ def plot_summed_rc_loss_kld(normal_data, abnormal_data):
 
     # Create plot
     # Create subplots
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=globale_dpi)
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=global_dpi)
 
     # Subplot 1: Combined Data
     axes[0].scatter(abnormal_sum_rc_loss, abnormal_sum_kld, color='red', alpha=alpha, s=dot_size, label=abnormal_data_label)
@@ -226,7 +220,7 @@ def plot_mean_rc_loss_kld(normal_data, abnormal_data):
 
     # Create plot
     # Create subplots
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=globale_dpi)
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=global_dpi)
 
     # Subplot 1: Combined Data
     axes[0].scatter(abnormal_mean_rc_loss, abnormal_mean_kld, color='red', alpha=alpha, s=dot_size, label=abnormal_data_label)
@@ -285,7 +279,7 @@ def plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnor
     abnormal_data_label = 'Abnormal Pixels'
 
     # Create subplots
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=globale_dpi)
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=global_dpi)
 
     # Subplot 1: Combined Data
     axes[0].scatter(abnormal_rc_loss, abnormal_kld, color='red', alpha=alpha, s=dot_size, label=abnormal_data_label)
@@ -352,7 +346,7 @@ def plot_pca(normal_z, abnormal_z):
     normal_data_label = 'Normal Data'
     abnormal_data_label = 'Abnormal Data'
 
-    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=globale_dpi)
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True, dpi=global_dpi)
 
     # Subplot 1: Combined Data
     axes[0].scatter(abnormal_principal_components[:, 0], abnormal_principal_components[:, 1], color='red', alpha=alpha, s=dot_size, label=abnormal_data_label)
@@ -426,7 +420,7 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
 
     # Create a 1x4 grid of subplots
     print(f'{time.strftime("%H:%M:%S")} Creating Combined figure...')
-    fig, axs = plt.subplots(4, 1, figsize=(10, 16), dpi=globale_dpi)
+    fig, axs = plt.subplots(4, 1, figsize=(10, 16), dpi=global_dpi)
 
     # Insert each plot into the grid
     axs[0].imshow(rc_kld_scatter_spectra_sum)

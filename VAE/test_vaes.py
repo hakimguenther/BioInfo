@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-from src.vae import VAE_1, VAE_2, VAE_2_1
+from src.vae import VAE_2_1
 from src.dataset import BioData
 import os
 from src.test import test_model, plot_good_and_bad_samples
@@ -12,12 +12,12 @@ def custom_collate(batch):
         return torch.empty(0, 442)  # Return an empty tensor with the right shape if batch is empty
     return torch.cat(batch, dim=0)
 
-# experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
-# data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
+experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
+data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
 
 
-experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
-data_splits_json = os.path.join(experiment_dir,"data", "data_splits.json")
+# experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
+# data_splits_json = os.path.join(experiment_dir,"data", "data_splits.json")
 batch_size = 1
 
 # Test Sets
@@ -30,29 +30,6 @@ abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, co
 plot_dir = os.path.join(experiment_dir, "docs", "figures")
 eval_plots_path = os.path.join(experiment_dir, "docs", "eval_plots")
 
-# Test VAE 1
-model_name = "vae_1_best.pth"
-model_path = os.path.join(experiment_dir, "models", model_name)
-model = VAE_1(device=device) 
-checkpoint = torch.load(model_path, map_location=device)
-model.load_state_dict(checkpoint['model_state_dict'])
-model.to(device)
-
-plot_good_and_bad_samples(normal_loader, model, device, 5, model_name, plot_dir)
-test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
-
-
-# Test VAE 2
-model_name = "vae_2_best.pth"
-model_path = os.path.join(experiment_dir, "models", model_name)
-model = VAE_2(device=device) 
-checkpoint = torch.load(model_path, map_location=device)
-model.load_state_dict(checkpoint['model_state_dict'])
-model.to(device)
-
-plot_good_and_bad_samples(normal_loader, model, device, 5, model_name, plot_dir)
-test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
-
 # Test VAE 2.1
 model_name = "vae_2_1_best.pth"
 model_path = os.path.join(experiment_dir, "models", model_name)
@@ -61,5 +38,8 @@ checkpoint = torch.load(model_path, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.to(device)
 
-plot_good_and_bad_samples(normal_loader, model, device, 5, model_name, plot_dir)
-test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
+
+output_dir = model_name.replace(".pth", "")
+plot_good_and_bad_samples(normal_loader, model, device, 20, output_dir +"_normal", plot_dir)
+plot_good_and_bad_samples(abnormal_loader, model, device, 20, output_dir +"_abnormal", plot_dir)
+# test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
