@@ -88,7 +88,36 @@ def visualize_comparison(original_tensor, reconstructed_tensor, experiment_name,
 
 #### evaluating model ####
 
-def evaluate_model(model, loader, device):
+def evaluate_model_normal(model, loader, device):
+    model.eval()  # Set the model to evaluation mode
+    results = []
+
+    with torch.no_grad():  # Disable gradient calculation for efficiency
+        progress_bar = tqdm(loader, total=len(loader), desc="Evaluating model")
+        for i, x in enumerate(progress_bar):
+            x = x.to(device)
+            x_hat, mean, log_var, z = model(x)
+            rc_loss, kld = no_reduction_loss_function(x, x_hat, mean, log_var)
+            
+            z = z.cpu().numpy()
+            rc_loss = rc_loss.cpu().numpy()
+            kld = kld.cpu().numpy()
+
+            # Retrieve the file path using the index
+            # Assuming loader.dataset is an instance of the BioData class or similar
+            file_path = loader.dataset.samples[i]
+
+            data_point = {
+                "file_path": file_path,
+                "rc_loss": rc_loss,
+                "kld": kld,
+                "z": z,
+            }
+            results.append(data_point)
+
+    return results
+
+def evaluate_model_abnormal(model, loader, device):
     model.eval()  # Set the model to evaluation mode
     results = []
 
@@ -120,42 +149,42 @@ def evaluate_model(model, loader, device):
     return results
 
 def extract_values_normal(data_points):
-    zs, klds, rc_losses = [], [], []
-    for data_point in data_points:        
-        zs.append(data_point['z'])
-        klds.append(data_point['kld'])
-        rc_losses.append(data_point['rc_loss'])
+    if not data_points:
+        return np.array([]), np.array([]), np.array([])
 
-    # Stack arrays for zs, klds, and rc_losses as before
-    zs_stacked = np.vstack(zs)
-    klds_stacked = np.concatenate(klds)
-    rc_losses_stacked = np.concatenate(rc_losses)
+    zs = data_points[0]['z']
+    klds = data_points[0]['kld']
+    rc_losses = data_points[0]['rc_loss']
 
-    return zs_stacked, klds_stacked, rc_losses_stacked
+    for data_point in data_points[1:]:
+        zs = np.vstack([zs, data_point['z']])
+        klds = np.concatenate([klds, data_point['kld']])
+        rc_losses = np.concatenate([rc_losses, data_point['rc_loss']])
+
+    return zs, klds, rc_losses
 
 def extract_values_abnormal(data_points):
-    zs, klds, rc_losses, file_paths, x, x_hat = [], [], [], [], [], []
-    for data_point in data_points:
-        # Number of data points associated with this file path
+    if not data_points:
+        return np.array([]), np.array([]), np.array([]), [], np.array([]), np.array([])
+
+    zs = data_points[0]['z']
+    klds = data_points[0]['kld']
+    rc_losses = data_points[0]['rc_loss']
+    x = data_points[0]['x']
+    x_hat = data_points[0]['x_hat']
+    file_paths = [data_points[0]['file_path']] * data_points[0]['z'].shape[0]
+
+    for data_point in data_points[1:]:
         num_points = data_point['z'].shape[0]
-        
-        zs.append(data_point['z'])
-        klds.append(data_point['kld'])
-        rc_losses.append(data_point['rc_loss'])
-        x.append(data_point['x'])
-        x_hat.append(data_point['x_hat'])
-        
-        # Replicate the file path for each data point
+        zs = np.vstack([zs, data_point['z']])
+        klds = np.concatenate([klds, data_point['kld']])
+        rc_losses = np.concatenate([rc_losses, data_point['rc_loss']])
+        x = np.vstack([x, data_point['x']])
+        x_hat = np.vstack([x_hat, data_point['x_hat']])
         file_paths.extend([data_point['file_path']] * num_points)
 
-    # Stack arrays for zs, klds, and rc_losses as before
-    zs_stacked = np.vstack(zs)
-    klds_stacked = np.concatenate(klds)
-    rc_losses_stacked = np.concatenate(rc_losses)
-    x_stacked = np.vstack(x)
-    x_hat_stacked = np.vstack(x_hat)
+    return zs, klds, rc_losses, file_paths, x, x_hat
 
-    return zs_stacked, klds_stacked, rc_losses_stacked, file_paths, x_stacked, x_hat_stacked
 
 #### plotting all spectra ####
 def sum_batch_data(data):
@@ -540,8 +569,8 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
         os.makedirs(docs_path)
 
     print(f'{time.strftime("%H:%M:%S")} Evaluating {model_name}...')
-    normal_data = evaluate_model(model, normal_loader, device)
-    abnormal_data = evaluate_model(model, abnormal_loader, device)
+    normal_data = evaluate_model_normal(model, normal_loader, device)
+    abnormal_data = evaluate_model_abnormal(model, abnormal_loader, device)
 
     # Extract the number of normal and abnormal spectra and pixels
     nr_normal_spec = len(normal_data)
@@ -554,9 +583,11 @@ def test_model(model, normal_loader, abnormal_loader, docs_path, device, model_n
     rc_kld_scatter_spectra_mean = plot_mean_rc_loss_kld(normal_data, abnormal_data)
 
     # Extract the values and file paths
+    print(f'{time.strftime("%H:%M:%S")} Extracting normal values...')
     normal_z, normal_kld, normal_rc_loss = extract_values_normal(normal_data)
     # delete normal_data to free up memory
     del normal_data
+    print(f'{time.strftime("%H:%M:%S")} Extracting abnormal values...')
     abnormal_z, abnormal_kld, abnormal_rc_loss, abnormal_file_paths, abnormal_x, abnormal_x_hat = extract_values_abnormal(abnormal_data)
     # delete abnormal_data to free up memory
     del abnormal_data
