@@ -179,14 +179,14 @@ def plot_summed_rc_loss_kld(normal_data, abnormal_data):
     # Capture the axis limits from the first plot
     xlims, ylims = axes[0].get_xlim(), axes[0].get_ylim()
 
-    # Label abnormal points outside the convex hull
-    for i, (x, y) in enumerate(zip(abnormal_sum_rc_loss, abnormal_sum_kld)):
-        if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
-            # Annotate the point with its file name, directly at the point with small font size
-            axes[0].annotate(abnormal_data[i]['file_path'].split('/')[-1].replace(".npy", "").replace("data",""),
-                             (x, y),
-                             fontsize=annotation_font_size,  # Set the annotation font size
-                             ha='center', va='center')
+    # # Label abnormal points outside the convex hull
+    # for i, (x, y) in enumerate(zip(abnormal_sum_rc_loss, abnormal_sum_kld)):
+    #     if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
+    #         # Annotate the point with its file name, directly at the point with small font size
+    #         axes[0].annotate(abnormal_data[i]['file_path'].split('/')[-1].replace(".npy", "").replace("data",""),
+    #                          (x, y),
+    #                          fontsize=annotation_font_size,  # Set the annotation font size
+    #                          ha='center', va='center')
 
 
     axes[0].set_title('Combined Data')
@@ -268,14 +268,14 @@ def plot_mean_rc_loss_kld(normal_data, abnormal_data):
     # Capture the axis limits from the first plot
     xlims, ylims = axes[0].get_xlim(), axes[0].get_ylim()
 
-    # Label abnormal points outside the convex hull
-    for i, (x, y) in enumerate(zip(abnormal_mean_rc_loss, abnormal_mean_kld)):
-        if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
-            # Annotate the point with its file name, directly at the point with small font size
-            axes[0].annotate(abnormal_data[i]['file_path'].split('/')[-1].replace(".npy", "").replace("data",""),
-                             (x, y),
-                             fontsize=annotation_font_size,  # Set the annotation font size
-                             ha='center', va='center')
+    # # Label abnormal points outside the convex hull
+    # for i, (x, y) in enumerate(zip(abnormal_mean_rc_loss, abnormal_mean_kld)):
+    #     if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
+    #         # Annotate the point with its file name, directly at the point with small font size
+    #         axes[0].annotate(abnormal_data[i]['file_path'].split('/')[-1].replace(".npy", "").replace("data",""),
+    #                          (x, y),
+    #                          fontsize=annotation_font_size,  # Set the annotation font size
+    #                          ha='center', va='center')
 
 
     axes[0].set_title('Combined Data')
@@ -349,14 +349,14 @@ def plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnor
     # Capture the axis limits from the first plot
     xlims, ylims = axes[0].get_xlim(), axes[0].get_ylim()
     
-    # Label abnormal points outside the convex hull
-    for i, (x, y) in enumerate(zip(abnormal_rc_loss, abnormal_kld)):
-        if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
-            # Annotate the point with its file name, directly at the point with small font size
-            axes[0].annotate(abnormal_file_paths[i].split('/')[-1].replace(".npy", "").replace("data",""),
-                             (x, y),
-                             fontsize=annotation_font_size,  # Set the annotation font size
-                             ha='center', va='center')
+    # # Label abnormal points outside the convex hull
+    # for i, (x, y) in enumerate(zip(abnormal_rc_loss, abnormal_kld)):
+    #     if any(hull.equations[:, :2].dot(np.array([x, y])) + hull.equations[:, 2] > 0):
+    #         # Annotate the point with its file name, directly at the point with small font size
+    #         axes[0].annotate(abnormal_file_paths[i].split('/')[-1].replace(".npy", "").replace("data",""),
+    #                          (x, y),
+    #                          fontsize=annotation_font_size,  # Set the annotation font size
+    #                          ha='center', va='center')
     
     axes[0].set_title('Combined Data')
     axes[0].set_xlabel(x_label)
@@ -436,14 +436,14 @@ def plot_pca(normal_z, abnormal_z, abnormal_file_paths):
     # Capture the axis limits from the first plot
     xlims, ylims = axes[0].get_xlim(), axes[0].get_ylim()
 
-    # Label abnormal points outside the convex hull
-    for i, point in enumerate(abnormal_principal_components):
-        if any(hull.equations[:, :2].dot(point) + hull.equations[:, 2] > 0):
-            # Annotate the point with its file name
-            axes[0].annotate(abnormal_file_paths[i].split('/')[-1].replace(".npy", "").replace("data", ""),
-                             point,
-                             fontsize=annotation_font_size,
-                             ha='center', va='center')
+    # # Label abnormal points outside the convex hull
+    # for i, point in enumerate(abnormal_principal_components):
+    #     if any(hull.equations[:, :2].dot(point) + hull.equations[:, 2] > 0):
+    #         # Annotate the point with its file name
+    #         axes[0].annotate(abnormal_file_paths[i].split('/')[-1].replace(".npy", "").replace("data", ""),
+    #                          point,
+    #                          fontsize=annotation_font_size,
+    #                          ha='center', va='center')
 
     axes[0].set_title('PCA: Combined Data')
     axes[0].set_xlabel(x_label)
