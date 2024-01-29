@@ -339,8 +339,8 @@ def plot_rc_loss_kld_scatter(normal_rc_loss, normal_kld, abnormal_rc_loss, abnor
     hull = ConvexHull(normal_points)
 
     # Subplot 1: Combined Data
-    axes[0].scatter(normal_rc_loss, normal_kld, color='blue', alpha=alpha, s=dot_size, label=normal_data_label)
     axes[0].scatter(abnormal_rc_loss, abnormal_kld, color='red', alpha=alpha, s=dot_size, label=abnormal_data_label)
+    axes[0].scatter(normal_rc_loss, normal_kld, color='blue', alpha=alpha, s=dot_size, label=normal_data_label)
     
     # Draw the convex hull
     for simplex in hull.simplices:
