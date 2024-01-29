@@ -2,12 +2,12 @@ import torch
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from src.vae import VAE_2_1
-from src.dataset import BioData
+from src.dataset import BioDataScaled
 from src.loss import plot_losses, loss_function
 from tqdm import tqdm
 from src.earlystopper import EarlyStopper
 import os
-device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 print("Using:", device)
 
@@ -117,12 +117,12 @@ def train(model, optimizer, epochs, device, train_loader, val_loader, early_stop
 # experiment_dir = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/VAE"
 # data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
 
-experiment_name = "vae_2_1"
-model_name = "vae_2_1_best.pth"
+experiment_name = "vae_2_1_scaled"
+# model_name = "vae_2_1_best.pth"
 experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
 data_splits_json = os.path.join(experiment_dir, "data", "data_splits.json")
-train_dataset = BioData(data_splits_json, "normal_corr_train")
-val_dataset = BioData(data_splits_json, "normal_corr_val")
+train_dataset = BioDataScaled(data_splits_json, "normal_corr_train")
+val_dataset = BioDataScaled(data_splits_json, "normal_corr_val")
 batch_size = 3
 learning_rate = 1e-4
 patience = 1000
@@ -132,13 +132,13 @@ train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=
 val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
 # train the VAE
-model_path = os.path.join(experiment_dir, "models", model_name)
-checkpoint = torch.load(model_path, map_location=device)
+# model_path = os.path.join(experiment_dir, "models", model_name)
+# checkpoint = torch.load(model_path, map_location=device)
 
 model = VAE_2_1(device=device).to(device)
-model.load_state_dict(checkpoint['model_state_dict'])
+# model.load_state_dict(checkpoint['model_state_dict'])
 optimizer = Adam(model.parameters(), lr=learning_rate)
-optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+# optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
 stopper = EarlyStopper(patience=patience, min_delta=0)
 train(

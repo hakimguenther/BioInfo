@@ -18,6 +18,7 @@ def no_reduction_loss_function(x, x_hat, mean, log_var):
 
 def plot_losses(training_losses, validation_losses, experiment_name, docs_dir):
     epochs = range(1, len(training_losses) + 1)
+    epochs = [int(epoch) for epoch in epochs]
     
     # Extracting loss values for plotting
     training_kdl_losses = [loss['average_training_kdl_loss'] for loss in training_losses]
@@ -31,7 +32,7 @@ def plot_losses(training_losses, validation_losses, experiment_name, docs_dir):
     lowest_val_kdl_loss = validation_kdl_losses[epoch_with_lowest_val_loss - 1]
     lowest_val_reproduction_loss = validation_reproduction_losses[epoch_with_lowest_val_loss - 1]
 
-    plt.figure(figsize=(15, 6))
+    plt.figure(figsize=(15, 6), dpi=300)
 
     # Subplot for KLD loss
     plt.subplot(1, 2, 1)
@@ -50,7 +51,7 @@ def plot_losses(training_losses, validation_losses, experiment_name, docs_dir):
     plt.plot(epochs, training_reproduction_losses, label='Average Training MAE Loss', color='blue', marker='o')
     plt.plot(epochs, validation_reproduction_losses, label='Average Validation MAE Loss', color='red', marker='o')
     plt.xlabel('Epoch')
-    plt.ylabel('Average MAE Loss (Log Scale)')
+    plt.ylabel('Average MAE Loss')
     plt.yscale('log')
     plt.title('MAE Loss Over Epochs')
     plt.legend()

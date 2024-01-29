@@ -49,8 +49,8 @@ class BioDataScaled(Dataset):
         file_data = np.load(file_path)
 
         # Min-Max scaling
-        min_val = -3
-        max_val = 5
+        min_val = -0.5
+        max_val = 1.5
         file_data = (file_data - min_val) / (max_val - min_val)
 
         # Reshape the data such that each pixel becomes a separate sample
