@@ -124,9 +124,9 @@ data_splits_json = os.path.join(experiment_dir, "data", "data_splits.json")
 train_dataset = BioDataScaled(data_splits_json, "normal_corr_train")
 val_dataset = BioDataScaled(data_splits_json, "normal_corr_val")
 batch_size = 3
-learning_rate = 1e-4
-patience = 1000
-nr_epochs = 4000
+learning_rate = 1e-3
+patience = 500
+nr_epochs = 12000
 
 train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)

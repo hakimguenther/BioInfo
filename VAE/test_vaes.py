@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from src.vae import VAE_2_1
 from src.dataset import BioData, BioDataScaled
 import os
-from VAE.src.test_without_sample_plotting import test_model
+from src.test_without_sample_plotting import test_model
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 def custom_collate(batch):
