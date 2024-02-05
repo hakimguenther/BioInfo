@@ -3,7 +3,7 @@ from torch.utils.data import DataLoader
 from src.vae import VAE_2_1
 from src.dataset import BioData, BioDataScaled
 import os
-from src.test_without_sample_plotting import test_model
+from src.test_without_sample_plotting import test_model, plot_good_and_bad_samples
 device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
 
 def custom_collate(batch):
@@ -23,21 +23,21 @@ batch_size = 1
 plot_dir = os.path.join(experiment_dir, "docs", "figures")
 eval_plots_path = os.path.join(experiment_dir, "docs", "eval_plots")
 
-##### Test VAE 2.1 unscaled ######
-model_name = "vae_2_1_unscaled_final.pth"
-output_dir = model_name.replace(".pth", "")
-model_path = os.path.join(experiment_dir, "models", model_name)
-model = VAE_2_1(device=device) 
-checkpoint = torch.load(model_path, map_location=device)
-model.load_state_dict(checkpoint['model_state_dict'])
-model.to(device)
+# ##### Test VAE 2.1 unscaled ######
+# model_name = "vae_2_1_unscaled_final.pth"
+# output_dir = model_name.replace(".pth", "")
+# model_path = os.path.join(experiment_dir, "models", model_name)
+# model = VAE_2_1(device=device) 
+# checkpoint = torch.load(model_path, map_location=device)
+# model.load_state_dict(checkpoint['model_state_dict'])
+# model.to(device)
 
-# Test
-abnormal_dataset = BioData(data_splits_json, "abnormal_corr")
-normal_dataset = BioData(data_splits_json, "normal_corr_test")
-abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
-normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
-test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
+# # Test
+# abnormal_dataset = BioData(data_splits_json, "abnormal_corr")
+# normal_dataset = BioData(data_splits_json, "normal_corr_test")
+# abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+# normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+# test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)
 
 
 ##### Test VAE 2.1 unscaled ######
@@ -54,4 +54,5 @@ abnormal_dataset = BioDataScaled(data_splits_json, "abnormal_corr")
 normal_dataset = BioDataScaled(data_splits_json, "normal_corr_test")
 abnormal_loader = DataLoader(dataset=abnormal_dataset, batch_size=batch_size, collate_fn=custom_collate)
 normal_loader = DataLoader(dataset=normal_dataset, batch_size=batch_size, collate_fn=custom_collate)
+plot_good_and_bad_samples(normal_loader,model, device, 30, output_dir, plot_dir)
 test_model(model, normal_loader, abnormal_loader, eval_plots_path, device, model_name)

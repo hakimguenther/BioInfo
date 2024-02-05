@@ -118,13 +118,13 @@ def train(model, optimizer, epochs, device, train_loader, val_loader, early_stop
 # data_splits_json = "/Users/hannesehringfeld/SSD/Uni/Master/WS23/Bioinformatik/BioInfo/data/data_splits.json"
 
 experiment_name = "vae_2_1_scaled"
-# model_name = "vae_2_1_best.pth"
+model_name = "vae_2_1_scaled_best.pth"
 experiment_dir = "/prodi/bioinfdata/user/bioinf3/VAE"
 data_splits_json = os.path.join(experiment_dir, "data", "data_splits.json")
 train_dataset = BioDataScaled(data_splits_json, "normal_corr_train")
 val_dataset = BioDataScaled(data_splits_json, "normal_corr_val")
 batch_size = 3
-learning_rate = 1e-3
+learning_rate = 1e-5
 patience = 500
 nr_epochs = 12000
 
@@ -132,11 +132,11 @@ train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=
 val_loader = DataLoader(dataset=val_dataset, batch_size=batch_size, shuffle=True, collate_fn=custom_collate)
 
 # train the VAE
-# model_path = os.path.join(experiment_dir, "models", model_name)
-# checkpoint = torch.load(model_path, map_location=device)
+model_path = os.path.join(experiment_dir, "models", model_name)
+checkpoint = torch.load(model_path, map_location=device)
 
 model = VAE_2_1(device=device).to(device)
-# model.load_state_dict(checkpoint['model_state_dict'])
+model.load_state_dict(checkpoint['model_state_dict'])
 optimizer = Adam(model.parameters(), lr=learning_rate)
 # optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
